@@ -527,9 +527,14 @@ contract Deploy is Deployer {
         contracts.L2OutputOracle = address(oracle);
         ChainAssertions.checkL2OutputOracle(contracts, cfg, 0, 0);
 
-        require(loadInitializedSlot("L2OutputOracle", false) == 1, "L2OutputOracle is not initialized");
+        require(loadInitializedSlot("L2OutputOracle", false) == 2, "L2OutputOracle is not initialized");
 
         addr_ = address(oracle);
+    }
+
+    function upgradeL2OutputOracle() public {
+        deployL2OutputOracle();
+        initializeL2OutputOracle();
     }
 
     /// @notice Deploy the OptimismMintableERC20Factory
@@ -895,7 +900,7 @@ contract Deploy is Deployer {
             _l2OutputOracleStartingTimestamp: cfg.l2OutputOracleStartingTimestamp()
         });
 
-        require(loadInitializedSlot("L2OutputOracle", true) == 1, "L2OutputOracleProxy is not initialized");
+        require(loadInitializedSlot("L2OutputOracle", true) == 2, "L2OutputOracleProxy is not initialized");
     }
 
     /// @notice Initialize the OptimismPortal

@@ -94,7 +94,7 @@ contract L2OutputOracle is Initializable, ISemver {
     /// @notice Initializer.
     /// @param _startingBlockNumber Block number for the first recoded L2 block.
     /// @param _startingTimestamp   Timestamp for the first recoded L2 block.
-    function initialize(uint256 _startingBlockNumber, uint256 _startingTimestamp) public initializer {
+    function initialize(uint256 _startingBlockNumber, uint256 _startingTimestamp) public reinitializer(2) {
         require(
             _startingTimestamp <= block.timestamp,
             "L2OutputOracle: starting L2 timestamp must be less than current time"
