@@ -172,7 +172,8 @@ contract Deploy is Deployer {
 
     /// @notice Make a call from the Safe contract to an arbitrary address with arbitrary data
     function _callViaSafe(address _target, bytes memory _data) internal {
-        Safe safe = Safe(mustGetAddress("SystemOwnerSafe"));
+        // Safe safe = Safe(mustGetAddress("SystemOwnerSafe"));
+        Safe safe = Safe(payable(0x58093b45A24613216aA2fe0b94DB8db0df339370));
 
         // This is the signature format used the caller is also the signer.
         bytes memory signature = abi.encodePacked(uint256(uint160(msg.sender)), bytes32(0), uint8(1));
