@@ -213,6 +213,6 @@ type ESNodeEndpointConfig struct {
 	ESNodeAddr string
 }
 
-func (cfg *ESNodeEndpointConfig) Setup(ctx context.Context, batcherAddr common.Address, log log.Logger) (cl *sources.ESClient, err error) {
-	return sources.NewESClient(cfg.ESNodeAddr, batcherAddr, log)
+func (cfg *ESNodeEndpointConfig) Setup(ctx context.Context, batchInboxAddr common.Address, log log.Logger) (cl *sources.ESClient, err error) {
+	return sources.NewESClient(cfg.ESNodeAddr, batchInboxAddr, log)
 }
