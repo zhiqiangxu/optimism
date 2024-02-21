@@ -47,7 +47,7 @@ func (s *ESClient) GetBlobs(blobHashes []eth.IndexedBlobHash) ([]*eth.BlobSideca
 	}
 
 	output := make([][]byte, len(invokes))
-	_, err := multicall.Do(context.Background(), s.client, &s.abi, invokes, output, s.batchInboxAddr)
+	err := multicall.DoFrom(context.Background(), s.client, &s.abi, invokes, output, s.batchInboxAddr)
 	if err != nil {
 		return nil, err
 	}
