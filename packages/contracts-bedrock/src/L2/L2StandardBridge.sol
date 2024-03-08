@@ -57,15 +57,17 @@ contract L2StandardBridge is StandardBridge, ISemver {
 
     /// @notice Constructs the L2StandardBridge contract.
     constructor() StandardBridge() {
-        initialize({ _otherBridge: StandardBridge(payable(address(0))) });
+        initialize({ _otherBridge: StandardBridge(payable(address(0))), _remoteTokenForLocalGas:address(0), _localTokenForRemoteGas:address(0) });
     }
 
     /// @notice Initializer.
     /// @param _otherBridge Contract for the corresponding bridge on the other chain.
-    function initialize(StandardBridge _otherBridge) public initializer {
+    function initialize(StandardBridge _otherBridge, address _remoteTokenForLocalGas, address _localTokenForRemoteGas) public initializer {
         __StandardBridge_init({
             _messenger: CrossDomainMessenger(Predeploys.L2_CROSS_DOMAIN_MESSENGER),
-            _otherBridge: _otherBridge
+            _otherBridge: _otherBridge,
+            _remoteTokenForLocalGas: _remoteTokenForLocalGas,
+            _localTokenForRemoteGas: _localTokenForRemoteGas
         });
     }
 

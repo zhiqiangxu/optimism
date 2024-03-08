@@ -15,9 +15,11 @@
 
 pragma solidity >=0.4.22 <0.6;
 
+// WETH9 now becomes the wrapped erc20 token for QKC
+// refer to L2WETH for the wrapped erc20 token for ETH
 contract WETH9 {
-    string public name     = "Wrapped Ether";
-    string public symbol   = "WETH";
+    string public name     = "Wrapped QKC";
+    string public symbol   = "WQKC";
     uint8  public decimals = 18;
 
     event  Approval(address indexed src, address indexed guy, uint wad);

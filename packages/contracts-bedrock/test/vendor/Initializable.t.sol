@@ -202,7 +202,7 @@ contract Initializer_Test is Bridge_Initializer {
         contracts.push(
             InitializeableContract({
                 target: deploy.mustGetAddress("L1StandardBridge"),
-                initCalldata: abi.encodeCall(l1StandardBridge.initialize, (l1CrossDomainMessenger, superchainConfig)),
+                initCalldata: abi.encodeCall(l1StandardBridge.initialize, (l1CrossDomainMessenger, superchainConfig, deploy.mustGetAddress("L2ETHAddress"), deploy.mustGetAddress("L1QKCAddress"))),
                 initializedSlotVal: deploy.loadInitializedSlot("L1StandardBridge")
             })
         );
@@ -210,7 +210,7 @@ contract Initializer_Test is Bridge_Initializer {
         contracts.push(
             InitializeableContract({
                 target: address(l1StandardBridge),
-                initCalldata: abi.encodeCall(l1StandardBridge.initialize, (l1CrossDomainMessenger, superchainConfig)),
+                initCalldata: abi.encodeCall(l1StandardBridge.initialize, (l1CrossDomainMessenger, superchainConfig, deploy.mustGetAddress("L2ETHAddress"), deploy.mustGetAddress("L1QKCAddress"))),
                 initializedSlotVal: deploy.loadInitializedSlot("L1StandardBridgeProxy")
             })
         );
@@ -218,7 +218,7 @@ contract Initializer_Test is Bridge_Initializer {
         contracts.push(
             InitializeableContract({
                 target: address(l2StandardBridge),
-                initCalldata: abi.encodeCall(l2StandardBridge.initialize, (l1StandardBridge)),
+                initCalldata: abi.encodeCall(l2StandardBridge.initialize, (l1StandardBridge, deploy.mustGetAddress("L1QKCAddress"), deploy.mustGetAddress("L2ETHAddress"))),
                 initializedSlotVal: deploy.loadInitializedSlot("L2StandardBridge")
             })
         );

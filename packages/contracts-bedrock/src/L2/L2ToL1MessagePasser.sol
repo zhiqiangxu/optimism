@@ -66,17 +66,19 @@ contract L2ToL1MessagePasser is ISemver {
         emit WithdrawerBalanceBurnt(balance);
     }
 
+
     /// @notice Sends a message from L2 to L1.
     /// @param _target   Address to call on L1 execution.
     /// @param _gasLimit Minimum gas limit for executing the message on L1.
     /// @param _data     Data to forward to L1 target.
     function initiateWithdrawal(address _target, uint256 _gasLimit, bytes memory _data) public payable {
+        uint value = msg.value > 0 ? 0 : 0/* TODOALAN compute from _data */;
         bytes32 withdrawalHash = Hashing.hashWithdrawal(
             Types.WithdrawalTransaction({
                 nonce: messageNonce(),
                 sender: msg.sender,
                 target: _target,
-                value: msg.value,
+                value: value,
                 gasLimit: _gasLimit,
                 data: _data
             })
