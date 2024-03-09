@@ -842,7 +842,7 @@ contract Deploy is Deployer {
         address l1CrossDomainMessengerProxy = mustGetAddress("L1CrossDomainMessengerProxy");
         address superchainConfigProxy = mustGetAddress("SuperchainConfigProxy");
         address l1QKCAddress = mustGetAddress("L1QKCAddress");
-        address l2ETHAddress = mustGetAddress("L2ETHAddress");
+        address l2WETHAddress = mustGetAddress("L2WETHAddress");
 
         uint256 proxyType = uint256(proxyAdmin.proxyType(l1StandardBridgeProxy));
         if (proxyType != uint256(ProxyAdmin.ProxyType.CHUGSPLASH)) {
@@ -858,7 +858,7 @@ contract Deploy is Deployer {
             _implementation: l1StandardBridge,
             _innerCallData: abi.encodeCall(
                 L1StandardBridge.initialize,
-                (L1CrossDomainMessenger(l1CrossDomainMessengerProxy), SuperchainConfig(superchainConfigProxy), l2ETHAddress, l1QKCAddress)
+                (L1CrossDomainMessenger(l1CrossDomainMessengerProxy), SuperchainConfig(superchainConfigProxy), l2WETHAddress, l1QKCAddress)
                 )
         });
 

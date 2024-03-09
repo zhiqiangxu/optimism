@@ -81,6 +81,9 @@ library Predeploys {
     /// @notice Address of the SoulETH predeploy.
     address internal constant SoulETH = 0x420000000000000000000000000000000000FffF;
 
+    /// @notice Address of the L2WETH predeploy.
+    address internal constant L2WETH = 0x420000000000000000000000000000000000fffe;
+
     /// @notice Address of the MultiCall3 predeploy.
     address internal constant MultiCall3 = 0xcA11bde05977b3631167028862bE2a173976CA11;
 

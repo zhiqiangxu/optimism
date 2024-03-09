@@ -68,6 +68,7 @@ type PredeploysImmutableConfig struct {
 	SenderCreator                struct{}
 	EntryPoint                   struct{}
 	SoulETH                      struct{}
+	L2WETH                       struct{}
 }
 
 // Check will ensure that the required fields are set on the config.

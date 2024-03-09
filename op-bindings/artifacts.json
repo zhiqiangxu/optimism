@@ -43,7 +43,8 @@
     "ISemver",
     "StorageSetter",
     "SuperchainConfig",
-    "SoulETH"
+    "SoulETH",
+    "L2WETH"
   ],
   "remote": [
     {
