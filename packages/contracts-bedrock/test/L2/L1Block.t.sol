@@ -4,6 +4,8 @@ pragma solidity 0.8.15;
 // Testing utilities
 import { CommonTest } from "test/setup/CommonTest.sol";
 
+import { console2 as console } from "forge-std/Test.sol";
+
 // Libraries
 import { Encoding } from "src/libraries/Encoding.sol";
 
@@ -146,5 +148,53 @@ contract L1BlockEcotone_Test is L1BlockTest {
         // make sure return value is the expected function selector for "NotDepositor()"
         bytes memory expReturn = hex"3cc50b45";
         assertEq(data, expReturn);
+    }
+
+    /// @dev Tests that `blockHash` works for block range [n-256, n) where n is the latest
+    /// L1 block number known by the L2 system.
+    function testFuzz_blockHash(
+        uint32 baseFeeScalar,
+        uint32 blobBaseFeeScalar,
+        uint64 sequenceNumber,
+        uint64 timestamp,
+        uint64 number,
+        uint256 baseFee,
+        uint256 blobBaseFee,
+        bytes32 hash,
+        bytes32 batcherHash
+    )
+        external
+    {
+        if (number > type(uint64).max - 257) {
+            number = type(uint64).max - 257;
+        }
+        if (uint256(hash) > type(uint256).max - 257) {
+            hash = bytes32(type(uint256).max - 257);
+        }
+
+        for (uint256 i = 2; i <= 257; i++) {
+            bytes memory functionCallDataPacked = Encoding.encodeSetL1BlockValuesEcotone(
+                baseFeeScalar,
+                blobBaseFeeScalar,
+                sequenceNumber,
+                timestamp,
+                number + uint64(i),
+                baseFee,
+                blobBaseFee,
+                bytes32(uint256(hash) + i),
+                batcherHash
+            );
+
+            vm.prank(depositor);
+            (bool success,) = address(l1Block).call(functionCallDataPacked);
+            assertTrue(success, "function call failed");
+        }
+
+        console.log("hello");
+        console.logBytes32(bytes32(0));
+        console.logBytes32(l1Block.blockHash(number + 257));
+        console.log("hello2");
+        // assertTrue(l1Block.blockHash(number + 257) == bytes32(0), "should return bytes32(0) for the latest L1
+        // block");
     }
 }
