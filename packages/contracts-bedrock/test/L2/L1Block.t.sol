@@ -165,14 +165,14 @@ contract L1BlockEcotone_Test is L1BlockTest {
     )
         external
     {
-        if (number > type(uint64).max - 257) {
-            number = type(uint64).max - 257;
+        if (number > type(uint64).max - 258) {
+            number = type(uint64).max - 258;
         }
-        if (uint256(hash) > type(uint256).max - 257) {
-            hash = bytes32(type(uint256).max - 257);
+        if (uint256(hash) > type(uint256).max - 258) {
+            hash = bytes32(type(uint256).max - 258);
         }
 
-        for (uint256 i = 2; i <= 257; i++) {
+        for (uint256 i = 1; i <= 258; i++) {
             bytes memory functionCallDataPacked = Encoding.encodeSetL1BlockValuesEcotone(
                 baseFeeScalar,
                 blobBaseFeeScalar,
@@ -188,13 +188,18 @@ contract L1BlockEcotone_Test is L1BlockTest {
             vm.prank(depositor);
             (bool success,) = address(l1Block).call(functionCallDataPacked);
             assertTrue(success, "function call failed");
+
+            assertEq(l1Block.number(), number + uint64(i));
+            assertEq(l1Block.hash(), bytes32(uint256(hash) + i));
         }
 
-        console.log("hello");
-        console.logBytes32(bytes32(0));
-        console.logBytes32(l1Block.blockHash(number + 257));
-        console.log("hello2");
-        // assertTrue(l1Block.blockHash(number + 257) == bytes32(0), "should return bytes32(0) for the latest L1
-        // block");
+        assertTrue(l1Block.blockHash(number + 258) == bytes32(0), "should return bytes32(0) for the latest L1 block");
+        assertTrue(l1Block.blockHash(number + 1) == bytes32(0), "should return bytes32(0) for blocks out of range");
+        for (uint256 i = 2; i <= 257; i++) {
+            assertTrue(
+                l1Block.blockHash(number + i) == bytes32(uint256(hash) + i),
+                "blockHash's return value should match the value set"
+            );
+        }
     }
 }
