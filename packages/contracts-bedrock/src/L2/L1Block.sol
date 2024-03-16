@@ -122,10 +122,14 @@ contract L1Block is ISemver {
         historyHashes[number % 8192] = hash;
     }
 
-    // translated from
-    // [opBlockhash](https://github.com/ethereum/go-ethereum/blob/e31709db6570e302557a9bccd681034ea0dcc246/core/vm/instructions.go#L434)
-    // with 256 => 8191
-    function blockHash(uint256 historyNumber) external view returns (bytes32) {
+    /// @custom:legacy
+    /// @notice Returns the L1 block hash at the requested L1 blocknumber.
+    /// Only the most recent 8191 L1 block hashes are available, excluding the current one.
+    /// @param _historyNumber         L1 blocknumber.
+    function blockHash(uint256 _historyNumber) external view returns (bytes32) {
+        // translated from
+        // [opBlockhash](https://github.com/ethereum/go-ethereum/blob/e31709db6570e302557a9bccd681034ea0dcc246/core/vm/instructions.go#L434)
+        // with 256 => 8191
         uint256 lower;
         uint256 upper = number;
         if (upper < 8192) {
@@ -133,8 +137,8 @@ contract L1Block is ISemver {
         } else {
             lower = upper - 8191;
         }
-        if (historyNumber >= lower && historyNumber < upper) {
-            return historyHashes[historyNumber % 8192];
+        if (_historyNumber >= lower && _historyNumber < upper) {
+            return historyHashes[_historyNumber % 8192];
         } else {
             return bytes32(0);
         }
