@@ -42,8 +42,7 @@
     "DelayedVetoable",
     "ISemver",
     "StorageSetter",
-    "SuperchainConfig",
-    "SoulETH"
+    "SuperchainConfig"
   ],
   "remote": [
     {
