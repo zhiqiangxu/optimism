@@ -21,7 +21,6 @@ type Config struct {
 	L2 L2EndpointSetup
 
 	Beacon L1BeaconEndpointSetup
-	ESNode ESNodeEndpointSetup
 
 	Driver driver.Config
 

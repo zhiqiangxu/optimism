@@ -26,7 +26,6 @@ const (
 
 type L1BeaconClientConfig struct {
 	FetchAllSidecars bool
-	ESClient         *ESClient
 }
 
 type L1BeaconClient struct {
@@ -131,44 +130,22 @@ func (cl *L1BeaconClient) GetBlobSidecars(ctx context.Context, ref eth.L1BlockRe
 
 	apiscs := make([]*eth.APIBlobSidecar, 0, len(hashes))
 	// filter and order by hashes
-	var missingHashes []eth.IndexedBlobHash
 	for _, h := range hashes {
-		found := false
 		for _, apisc := range resp.Data {
 			if h.Index == uint64(apisc.Index) {
-				found = true
 				apiscs = append(apiscs, apisc)
 				break
 			}
 		}
-		if !found {
-			missingHashes = append(missingHashes, h)
-			// nil as a place holder
-			apiscs = append(apiscs, nil)
-		}
 	}
 
-	var fetchedFromES []*eth.BlobSidecar
-	if len(missingHashes) > 0 && cl.cfg.ESClient != nil {
-		fetchedFromES, err = cl.cfg.ESClient.GetBlobs(missingHashes)
-		if err != nil {
-			return nil, fmt.Errorf("failed to fetch missing blobs from es client:%v", err)
-		}
-		missingHashes = nil
-	}
-
-	if len(missingHashes) > 0 {
-		return nil, fmt.Errorf("expected %v sidecars but got %v", len(hashes), len(hashes)-len(missingHashes))
+	if len(hashes) != len(apiscs) {
+		return nil, fmt.Errorf("expected %v sidecars but got %v", len(hashes), len(apiscs))
 	}
 
 	bscs := make([]*eth.BlobSidecar, 0, len(hashes))
 	for _, apisc := range apiscs {
-		if apisc != nil {
-			bscs = append(bscs, apisc.BlobSidecar())
-		} else {
-			bscs = append(bscs, fetchedFromES[0])
-			fetchedFromES = fetchedFromES[1:]
-		}
+		bscs = append(bscs, apisc.BlobSidecar())
 	}
 
 	return bscs, nil

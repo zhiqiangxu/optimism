@@ -79,7 +79,6 @@ func NewConfig(ctx *cli.Context, log log.Logger) (*node.Config, error) {
 		Rollup: *rollupConfig,
 		Driver: *driverConfig,
 		Beacon: NewBeaconEndpointConfig(ctx),
-		ESNode: NewConditionalESNodeConfig(ctx),
 		RPC: node.RPCConfig{
 			ListenAddr:  ctx.String(flags.RPCListenAddr.Name),
 			ListenPort:  ctx.Int(flags.RPCListenPort.Name),
@@ -130,16 +129,6 @@ func NewBeaconEndpointConfig(ctx *cli.Context) node.L1BeaconEndpointSetup {
 		BeaconAddr:             ctx.String(flags.BeaconAddr.Name),
 		BeaconCheckIgnore:      ctx.Bool(flags.BeaconCheckIgnore.Name),
 		BeaconFetchAllSidecars: ctx.Bool(flags.BeaconFetchAllSidecars.Name),
-	}
-}
-
-func NewConditionalESNodeConfig(ctx *cli.Context) node.ESNodeEndpointSetup {
-	if ctx.String(flags.ESNodeAddr.Name) == "" {
-		return nil
-	}
-
-	return &node.ESNodeEndpointConfig{
-		ESNodeAddr: ctx.String(flags.ESNodeAddr.Name),
 	}
 }
 
