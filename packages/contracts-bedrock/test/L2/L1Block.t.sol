@@ -4,8 +4,6 @@ pragma solidity 0.8.15;
 // Testing utilities
 import { CommonTest } from "test/setup/CommonTest.sol";
 
-import { console2 as console } from "forge-std/Test.sol";
-
 // Libraries
 import { Encoding } from "src/libraries/Encoding.sol";
 
