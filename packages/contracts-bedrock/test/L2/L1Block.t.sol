@@ -163,14 +163,14 @@ contract L1BlockEcotone_Test is L1BlockTest {
     )
         external
     {
-        if (number > type(uint64).max - 8193) {
-            number = type(uint64).max - 8193;
+        if (number > type(uint64).max - uint64(l1Block.HISTORY_SIZE()) - 1) {
+            number = type(uint64).max - uint64(l1Block.HISTORY_SIZE()) - 1;
         }
-        if (uint256(hash) > type(uint256).max - 8193) {
-            hash = bytes32(type(uint256).max - 8193);
+        if (uint256(hash) > type(uint256).max - l1Block.HISTORY_SIZE() - 1) {
+            hash = bytes32(type(uint256).max - l1Block.HISTORY_SIZE() - 1);
         }
 
-        for (uint256 i = 1; i <= 8193; i++) {
+        for (uint256 i = 1; i <= l1Block.HISTORY_SIZE() + 1; i++) {
             bytes memory functionCallDataPacked = Encoding.encodeSetL1BlockValuesEcotone(
                 baseFeeScalar,
                 blobBaseFeeScalar,
@@ -191,9 +191,12 @@ contract L1BlockEcotone_Test is L1BlockTest {
             assertEq(l1Block.hash(), bytes32(uint256(hash) + i));
         }
 
-        assertTrue(l1Block.blockHash(number + 8193) == bytes32(0), "should return bytes32(0) for the latest L1 block");
+        assertTrue(
+            l1Block.blockHash(number + l1Block.HISTORY_SIZE() + 1) == bytes32(0),
+            "should return bytes32(0) for the latest L1 block"
+        );
         assertTrue(l1Block.blockHash(number + 1) == bytes32(0), "should return bytes32(0) for blocks out of range");
-        for (uint256 i = 2; i <= 8192; i++) {
+        for (uint256 i = 2; i <= l1Block.HISTORY_SIZE(); i++) {
             assertTrue(
                 l1Block.blockHash(number + i) == bytes32(uint256(hash) + i),
                 "blockHash's return value should match the value set"

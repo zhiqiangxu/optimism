@@ -49,8 +49,10 @@ contract L1Block is ISemver {
     /// @notice The latest L1 blob base fee.
     uint256 public blobBaseFee;
 
+    /// @notice size of historyHashes.
+    uint256 public constant HISTORY_SIZE = 8192;
     /// @notice The 8191 history L1 blockhashes and 1 latest L1 blockhash.
-    bytes32[8192] public historyHashes;
+    bytes32[HISTORY_SIZE] public historyHashes;
 
     /// @custom:semver 1.2.0
     string public constant version = "1.2.0";
@@ -119,7 +121,7 @@ contract L1Block is ISemver {
             sstore(batcherHash.slot, calldataload(132)) // bytes32
         }
 
-        historyHashes[number % 8192] = hash;
+        historyHashes[number % HISTORY_SIZE] = hash;
     }
 
     /// @custom:legacy
@@ -129,16 +131,16 @@ contract L1Block is ISemver {
     function blockHash(uint256 _historyNumber) external view returns (bytes32) {
         // translated from
         // [opBlockhash](https://github.com/ethereum/go-ethereum/blob/e31709db6570e302557a9bccd681034ea0dcc246/core/vm/instructions.go#L434)
-        // with 256 => 8191
+        // with 256 => HISTORY_SIZE-1
         uint256 lower;
         uint256 upper = number;
-        if (upper < 8192) {
+        if (upper < HISTORY_SIZE) {
             lower = 0;
         } else {
-            lower = upper - 8191;
+            lower = upper - HISTORY_SIZE + 1;
         }
         if (_historyNumber >= lower && _historyNumber < upper) {
-            return historyHashes[_historyNumber % 8192];
+            return historyHashes[_historyNumber % HISTORY_SIZE];
         } else {
             return bytes32(0);
         }
