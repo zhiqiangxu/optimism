@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/txpool"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
@@ -1013,4 +1014,134 @@ func TestEcotone(t *testing.T) {
 			assert.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
 		})
 	}
+}
+
+func TestSoulETH(t *testing.T) {
+	t.Run("no SoulETH", func(t *testing.T) {
+		InitParallel(t)
+		cfg := DefaultSystemConfig(t)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+
+		opGeth, err := NewOpGeth(t, ctx, &cfg)
+		require.NoError(t, err)
+		defer opGeth.Close()
+
+		balanceBefore, err := opGeth.L2Client.BalanceAt(context.Background(), cfg.Secrets.Addresses().Bob, nil)
+		require.NoError(t, err)
+		signer := types.LatestSigner(opGeth.L2ChainConfig)
+		tx := types.MustSignNewTx(cfg.Secrets.Bob, signer, &types.DynamicFeeTx{
+			ChainID:   big.NewInt(int64(cfg.DeployConfig.L2ChainID)),
+			Nonce:     0,
+			GasTipCap: big.NewInt(100),
+			GasFeeCap: big.NewInt(100000),
+			Gas:       1_000_001,
+			To:        &cfg.Secrets.Addresses().Alice,
+			Value:     big.NewInt(0),
+			Data:      nil,
+		})
+
+		_, err = opGeth.AddL2Block(ctx, tx)
+		require.NoError(t, err)
+
+		// check gas is deducted from native balance
+		balanceAfter, err := opGeth.L2Client.BalanceAt(context.Background(), cfg.Secrets.Addresses().Bob, nil)
+		require.NoError(t, err)
+		require.True(t, balanceBefore.Cmp(balanceAfter) > 0)
+	})
+	t.Run("have SoulETH but not enough", func(t *testing.T) {
+		InitParallel(t)
+		cfg := DefaultSystemConfig(t)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+
+		opGeth, err := NewOpGeth(t, ctx, &cfg)
+		require.NoError(t, err)
+		defer opGeth.Close()
+
+		// mint tiny amount of SoulETH with deposit tx
+		mintTx := types.NewTx(&types.DepositTx{
+			From:  core.SoulMinter,
+			To:    &types.SoulETHAddr,
+			Value: big.NewInt(0),
+			Gas:   1000001,
+			Data:  core.MintSoulBalanceData(cfg.Secrets.Addresses().Bob, big.NewInt(1)),
+		})
+
+		balanceBefore, err := opGeth.L2Client.BalanceAt(context.Background(), cfg.Secrets.Addresses().Bob, nil)
+		require.NoError(t, err)
+		signer := types.LatestSigner(opGeth.L2ChainConfig)
+		tx := types.MustSignNewTx(cfg.Secrets.Bob, signer, &types.DynamicFeeTx{
+			ChainID:   big.NewInt(int64(cfg.DeployConfig.L2ChainID)),
+			Nonce:     0,
+			GasTipCap: big.NewInt(100),
+			GasFeeCap: big.NewInt(100000),
+			Gas:       1_000_001,
+			To:        &cfg.Secrets.Addresses().Alice,
+			Value:     big.NewInt(0),
+			Data:      nil,
+		})
+
+		_, err = opGeth.AddL2Block(ctx, mintTx, tx)
+		require.NoError(t, err)
+
+		receipt, err := opGeth.L2Client.TransactionReceipt(ctx, mintTx.Hash())
+		require.NoError(t, err)
+		assert.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
+
+		// check gas is deducted from native balance
+		balanceAfter, err := opGeth.L2Client.BalanceAt(context.Background(), cfg.Secrets.Addresses().Bob, nil)
+		require.NoError(t, err)
+		require.True(t, balanceAfter.Cmp(balanceBefore) > 0)
+	})
+	t.Run("have SoulETH and enough", func(t *testing.T) {
+		InitParallel(t)
+		cfg := DefaultSystemConfig(t)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+		defer cancel()
+
+		opGeth, err := NewOpGeth(t, ctx, &cfg)
+		require.NoError(t, err)
+		defer opGeth.Close()
+
+		// mint enough SoulETH with deposit tx
+		mintTx := types.NewTx(&types.DepositTx{
+			From:  core.SoulMinter,
+			To:    &types.SoulETHAddr,
+			Value: big.NewInt(0),
+			Gas:   1000001,
+			Data:  core.MintSoulBalanceData(cfg.Secrets.Addresses().Bob, big.NewInt(params.Ether)),
+		})
+
+		signer := types.LatestSigner(opGeth.L2ChainConfig)
+
+		fromAddr := cfg.Secrets.Addresses().Bob
+		balanceBefore, err := opGeth.L2Client.BalanceAt(ctx, fromAddr, nil)
+		require.NoError(t, err)
+		tx := types.MustSignNewTx(cfg.Secrets.Bob, signer, &types.DynamicFeeTx{
+			ChainID:   big.NewInt(int64(cfg.DeployConfig.L2ChainID)),
+			Nonce:     0,
+			GasTipCap: big.NewInt(100),
+			GasFeeCap: big.NewInt(100000),
+			Gas:       1_000_001,
+			To:        &cfg.Secrets.Addresses().Alice,
+			Value:     big.NewInt(0),
+			Data:      nil,
+		})
+
+		_, err = opGeth.AddL2Block(ctx, mintTx, tx)
+		require.NoError(t, err)
+
+		receipt, err := opGeth.L2Client.TransactionReceipt(ctx, mintTx.Hash())
+		require.NoError(t, err)
+		assert.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
+
+		// check gas is not deducted from native balance
+		balanceAfter, err := opGeth.L2Client.BalanceAt(ctx, fromAddr, nil)
+		require.NoError(t, err)
+		require.True(t, balanceBefore.Cmp(balanceAfter) == 0)
+	})
 }
