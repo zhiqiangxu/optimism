@@ -31,10 +31,6 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ISemver {
         uint64 timestamp;
     }
 
-    /// @dev Remove this in favor of a configurable sauron role. This should probably live in the superchain config,
-    ///      but need to confirm with security.
-    address internal constant SAURON = address(0xdead);
-
     /// @notice The delay between when a withdrawal transaction is proven and when it may be finalized.
     uint256 internal immutable PROOF_MATURITY_DELAY_SECONDS;
 
@@ -82,14 +78,20 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ISemver {
     /// @custom:network-specific
     DisputeGameFactory public disputeGameFactory;
 
-    /// @notice A mapping of withdrawal hashes to `ProvenWithdrawal` data.
-    mapping(bytes32 => ProvenWithdrawal) public provenWithdrawals;
+    /// @notice A mapping of withdrawal hashes to proof submitters to `ProvenWithdrawal` data.
+    mapping(bytes32 => mapping(address => ProvenWithdrawal)) public provenWithdrawals;
 
     /// @notice A mapping of dispute game addresses to whether or not they are blacklisted.
     mapping(IDisputeGame => bool) public disputeGameBlacklist;
 
     /// @notice The game type that the OptimismPortal consults for output proposals.
     GameType public respectedGameType;
+
+    /// @notice The timestamp at which the respected game type was last updated.
+    uint64 public respectedGameTypeUpdatedAt;
+
+    /// @notice Mapping of withdrawal hashes to addresses that have submitted a proof for the withdrawal.
+    mapping(bytes32 => address[]) public proofSubmitters;
 
     /// @notice Emitted when a transaction is deposited from L1 to L2.
     ///         The parameters of this event are read by the rollup node and used to derive deposit
@@ -118,8 +120,8 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ISemver {
     }
 
     /// @notice Semantic version.
-    /// @custom:semver 3.0.0
-    string public constant version = "3.0.0";
+    /// @custom:semver 3.5.0
+    string public constant version = "3.5.0";
 
     /// @notice Constructs the OptimismPortal contract.
     constructor(
@@ -184,9 +186,18 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ISemver {
     }
 
     /// @notice Getter for the current paused status.
-    /// @return paused_ Whether or not the contract is paused.
-    function paused() public view returns (bool paused_) {
-        paused_ = superchainConfig.paused();
+    function paused() public view returns (bool) {
+        return superchainConfig.paused();
+    }
+
+    /// @notice Getter for the proof maturity delay.
+    function proofMaturityDelaySeconds() public view returns (uint256) {
+        return PROOF_MATURITY_DELAY_SECONDS;
+    }
+
+    /// @notice Getter for the dispute game finality delay.
+    function disputeGameFinalityDelaySeconds() public view returns (uint256) {
+        return DISPUTE_GAME_FINALITY_DELAY_SECONDS;
     }
 
     /// @notice Computes the minimum gas limit for a deposit.
@@ -204,7 +215,6 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ISemver {
     ///         funds be deposited to their address on L2. This is intended as a convenience
     ///         function for EOAs. Contracts should call the depositTransaction() function directly
     ///         otherwise any deposited funds will be lost due to address aliasing.
-    // solhint-disable-next-line ordering
     receive() external payable {
         depositTransaction(msg.sender, msg.value, RECEIVE_DEFAULT_GAS_LIMIT, false, bytes(""));
     }
@@ -258,7 +268,14 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ISemver {
 
         // Load the ProvenWithdrawal into memory, using the withdrawal hash as a unique identifier.
         bytes32 withdrawalHash = Hashing.hashWithdrawal(_tx);
-        ProvenWithdrawal memory provenWithdrawal = provenWithdrawals[withdrawalHash];
+        ProvenWithdrawal memory provenWithdrawal = provenWithdrawals[withdrawalHash][msg.sender];
+
+        // We do not allow for proving withdrawals against dispute games that have resolved against the favor
+        // of the root claim.
+        require(
+            gameProxy.status() != GameStatus.CHALLENGER_WINS,
+            "OptimismPortal: cannot prove against invalid dispute games"
+        );
 
         // We generally want to prevent users from proving the same withdrawal multiple times
         // because each successive proof will update the timestamp. A malicious user can take
@@ -266,10 +283,11 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ISemver {
         // in the case that an honest user proves their withdrawal against a dispute game that
         // resolves against the root claim, or the dispute game is blacklisted, we allow
         // re-proving the withdrawal against a new proposal.
+        IDisputeGame oldGame = provenWithdrawal.disputeGameProxy;
         require(
-            provenWithdrawal.timestamp == 0 || gameProxy.status() == GameStatus.CHALLENGER_WINS
-                || disputeGameBlacklist[gameProxy],
-            "OptimismPortal: withdrawal hash has already been proven, and dispute game is not invalid"
+            provenWithdrawal.timestamp == 0 || oldGame.status() == GameStatus.CHALLENGER_WINS
+                || disputeGameBlacklist[oldGame] || oldGame.gameType().raw() != respectedGameType.raw(),
+            "OptimismPortal: withdrawal hash has already been proven, and the old dispute game is not invalid"
         );
 
         // Compute the storage slot of the withdrawal hash in the L2ToL1MessagePasser contract.
@@ -296,16 +314,32 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ISemver {
         // Designate the withdrawalHash as proven by storing the `disputeGameProxy` & `timestamp` in the
         // `provenWithdrawals` mapping. A `withdrawalHash` can only be proven once unless the dispute game it proved
         // against resolves against the favor of the root claim.
-        provenWithdrawals[withdrawalHash] =
+        provenWithdrawals[withdrawalHash][msg.sender] =
             ProvenWithdrawal({ disputeGameProxy: gameProxy, timestamp: uint64(block.timestamp) });
 
         // Emit a `WithdrawalProven` event.
         emit WithdrawalProven(withdrawalHash, _tx.sender, _tx.target);
+
+        // Add the proof submitter to the list of proof submitters for this withdrawal hash.
+        proofSubmitters[withdrawalHash].push(msg.sender);
     }
 
     /// @notice Finalizes a withdrawal transaction.
     /// @param _tx Withdrawal transaction to finalize.
     function finalizeWithdrawalTransaction(Types.WithdrawalTransaction memory _tx) external whenNotPaused {
+        finalizeWithdrawalTransactionExternalProof(_tx, msg.sender);
+    }
+
+    /// @notice Finalizes a withdrawal transaction, using an external proof submitter.
+    /// @param _tx Withdrawal transaction to finalize.
+    /// @param _proofSubmitter Address of the proof submitter.
+    function finalizeWithdrawalTransactionExternalProof(
+        Types.WithdrawalTransaction memory _tx,
+        address _proofSubmitter
+    )
+        public
+        whenNotPaused
+    {
         // Make sure that the l2Sender has not yet been set. The l2Sender is set to a value other
         // than the default value when a withdrawal transaction is being finalized. This check is
         // a defacto reentrancy guard.
@@ -317,7 +351,7 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ISemver {
         bytes32 withdrawalHash = Hashing.hashWithdrawal(_tx);
 
         // Check that the withdrawal can be finalized.
-        checkWithdrawal(withdrawalHash);
+        checkWithdrawal(withdrawalHash, _proofSubmitter);
 
         // Mark the withdrawal as finalized so it can't be replayed.
         finalizedWithdrawals[withdrawalHash] = true;
@@ -404,32 +438,25 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ISemver {
     /// @notice Blacklists a dispute game. Should only be used in the event that a dispute game resolves incorrectly.
     /// @param _disputeGame Dispute game to blacklist.
     function blacklistDisputeGame(IDisputeGame _disputeGame) external {
-        require(msg.sender == SAURON, "OptimismPortal: only sauron can blacklist dispute games");
+        require(msg.sender == guardian(), "OptimismPortal: only the guardian can blacklist dispute games");
         disputeGameBlacklist[_disputeGame] = true;
-    }
-
-    /// @notice Deletes a proven withdrawal from the `provenWithdrawals` mapping in the case that a MPT proof was
-    ///         incorrectly verified by the `MerkleTrie` verifier contract.
-    /// @param _withdrawalHash Hash of the withdrawal transaction to delete from the `pendingWithdrawals` mapping.
-    function deleteProvenWithdrawal(bytes32 _withdrawalHash) external {
-        require(msg.sender == SAURON, "OptimismPortal: only sauron can delete proven withdrawals");
-        delete provenWithdrawals[_withdrawalHash];
     }
 
     /// @notice Sets the respected game type. Changing this value can alter the security properties of the system,
     ///         depending on the new game's behavior.
     /// @param _gameType The game type to consult for output proposals.
     function setRespectedGameType(GameType _gameType) external {
-        require(msg.sender == SAURON, "OptimismPortal: only sauron can set the respected game type");
+        require(msg.sender == guardian(), "OptimismPortal: only the guardian can set the respected game type");
         respectedGameType = _gameType;
+        respectedGameTypeUpdatedAt = uint64(block.timestamp);
     }
 
-    /// @notice Checks if a withdrawal can be finalized. NOTE: Decision was made to have this
-    ///         function revert rather than returning a boolean so that was more obvious why the
-    ///         function failed.
+    /// @notice Checks if a withdrawal can be finalized. This function will revert if the withdrawal cannot be
+    ///         finalized, and otherwise has no side-effects.
     /// @param _withdrawalHash Hash of the withdrawal to check.
-    function checkWithdrawal(bytes32 _withdrawalHash) public view {
-        ProvenWithdrawal memory provenWithdrawal = provenWithdrawals[_withdrawalHash];
+    /// @param _proofSubmitter The submitter of the proof for the withdrawal hash
+    function checkWithdrawal(bytes32 _withdrawalHash, address _proofSubmitter) public view {
+        ProvenWithdrawal memory provenWithdrawal = provenWithdrawals[_withdrawalHash][_proofSubmitter];
         IDisputeGame disputeGameProxy = provenWithdrawal.disputeGameProxy;
 
         // The dispute game must not be blacklisted.
@@ -438,14 +465,19 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ISemver {
         // A withdrawal can only be finalized if it has been proven. We know that a withdrawal has
         // been proven at least once when its timestamp is non-zero. Unproven withdrawals will have
         // a timestamp of zero.
-        require(provenWithdrawal.timestamp != 0, "OptimismPortal: withdrawal has not been proven yet");
+        require(
+            provenWithdrawal.timestamp != 0,
+            "OptimismPortal: withdrawal has not been proven by proof submitter address yet"
+        );
+
+        uint64 createdAt = disputeGameProxy.createdAt().raw();
 
         // As a sanity check, we make sure that the proven withdrawal's timestamp is greater than
         // starting timestamp inside the Dispute Game. Not strictly necessary but extra layer of
         // safety against weird bugs in the proving step.
         require(
-            provenWithdrawal.timestamp > disputeGameProxy.createdAt().raw(),
-            "OptimismPortal: withdrawal timestamp less than L2 Oracle starting timestamp"
+            provenWithdrawal.timestamp > createdAt,
+            "OptimismPortal: withdrawal timestamp less than dispute game creation timestamp"
         );
 
         // A proven withdrawal must wait at least `PROOF_MATURITY_DELAY_SECONDS` before finalizing.
@@ -459,7 +491,19 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ISemver {
         // from finalizing withdrawals proven against non-finalized output roots.
         require(
             disputeGameProxy.status() == GameStatus.DEFENDER_WINS,
-            "OptimismPortal: output proposal has not been finalized yet"
+            "OptimismPortal: output proposal has not been validated"
+        );
+
+        // The game type of the dispute game must be the respected game type. This was also checked in
+        // `proveWithdrawalTransaction`, but we check it again in case the respected game type has changed since
+        // the withdrawal was proven.
+        require(disputeGameProxy.gameType().raw() == respectedGameType.raw(), "OptimismPortal: invalid game type");
+
+        // The game must have been created after `respectedGameTypeUpdatedAt`. This is to prevent users from creating
+        // invalid disputes against a deployed game type while the off-chain challenge agents are not watching.
+        require(
+            createdAt >= respectedGameTypeUpdatedAt,
+            "OptimismPortal: dispute game created before respected game type was updated"
         );
 
         // Before a withdrawal can be finalized, the dispute game it was proven against must have been
@@ -472,5 +516,12 @@ contract OptimismPortal2 is Initializable, ResourceMetering, ISemver {
 
         // Check that this withdrawal has not already been finalized, this is replay protection.
         require(!finalizedWithdrawals[_withdrawalHash], "OptimismPortal: withdrawal has already been finalized");
+    }
+
+    /// @notice External getter for the number of proof submitters for a withdrawal hash.
+    /// @param _withdrawalHash Hash of the withdrawal.
+    /// @return The number of proof submitters for the withdrawal hash.
+    function numProofSubmitters(bytes32 _withdrawalHash) external view returns (uint256) {
+        return proofSubmitters[_withdrawalHash].length;
     }
 }

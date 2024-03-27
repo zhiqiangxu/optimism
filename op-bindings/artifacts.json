@@ -19,7 +19,6 @@
     "L1FeeVault",
     "OptimismMintableERC20Factory",
     "OptimismMintableERC20",
-    "LegacyERC20ETH",
     "Proxy",
     "ProxyAdmin",
     "LegacyMessagePasser",
@@ -27,6 +26,7 @@
     "WETH9",
     "DeployerWhitelist",
     "L1BlockNumber",
+    "DelayedWETH",
     "DisputeGameFactory",
     "FaultDisputeGame",
     "AlphabetVM",
@@ -43,6 +43,7 @@
     "ISemver",
     "StorageSetter",
     "SuperchainConfig",
+    "DataAvailabilityChallenge",
     "SoulETH"
   ],
   "remote": [

@@ -43,7 +43,7 @@ func CreateGame(ctx *cli.Context) error {
 		return fmt.Errorf("failed to create dispute game factory bindings: %w", err)
 	}
 
-	txCandidate, err := contract.CreateTx(uint32(traceType), outputRoot, l2BlockNum)
+	txCandidate, err := contract.CreateTx(ctx.Context, uint32(traceType), outputRoot, l2BlockNum)
 	if err != nil {
 		return fmt.Errorf("failed to create tx: %w", err)
 	}
@@ -63,16 +63,16 @@ func CreateGame(ctx *cli.Context) error {
 	return nil
 }
 
-var createGameFlags = []cli.Flag{
-	flags.L1EthRpcFlag,
-	flags.FactoryAddressFlag,
-	OutputRootFlag,
-	L2BlockNumFlag,
-}
-
-func init() {
-	createGameFlags = append(createGameFlags, txmgr.CLIFlagsWithDefaults(flags.EnvVarPrefix, txmgr.DefaultChallengerFlagValues)...)
-	createGameFlags = append(createGameFlags, oplog.CLIFlags(flags.EnvVarPrefix)...)
+func createGameFlags() []cli.Flag {
+	cliFlags := []cli.Flag{
+		flags.L1EthRpcFlag,
+		flags.FactoryAddressFlag,
+		OutputRootFlag,
+		L2BlockNumFlag,
+	}
+	cliFlags = append(cliFlags, txmgr.CLIFlagsWithDefaults(flags.EnvVarPrefix, txmgr.DefaultChallengerFlagValues)...)
+	cliFlags = append(cliFlags, oplog.CLIFlags(flags.EnvVarPrefix)...)
+	return cliFlags
 }
 
 var CreateGameCommand = &cli.Command{
@@ -80,6 +80,6 @@ var CreateGameCommand = &cli.Command{
 	Usage:       "Creates a dispute game via the factory",
 	Description: "Creates a dispute game via the factory",
 	Action:      CreateGame,
-	Flags:       createGameFlags,
+	Flags:       createGameFlags(),
 	Hidden:      true,
 }

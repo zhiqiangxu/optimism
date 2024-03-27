@@ -15,7 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	bss "github.com/ethereum-optimism/optimism/op-batcher/batcher"
-	"github.com/ethereum-optimism/optimism/op-batcher/compressor"
 	batcherFlags "github.com/ethereum-optimism/optimism/op-batcher/flags"
 	con "github.com/ethereum-optimism/optimism/op-conductor/conductor"
 	conrpc "github.com/ethereum-optimism/optimism/op-conductor/rpc"
@@ -95,7 +94,7 @@ func setupSequencerFailoverTest(t *testing.T) (*System, map[string]*conductor) {
 	c2 := conductors[Sequencer2Name]
 	c3 := conductors[Sequencer3Name]
 
-	require.NoError(t, waitForLeadershipChange(t, c1, true))
+	require.NoError(t, waitForLeadership(t, c1))
 	require.NoError(t, c1.client.AddServerAsVoter(ctx, Sequencer2Name, c2.ConsensusEndpoint()))
 	require.NoError(t, c1.client.AddServerAsVoter(ctx, Sequencer3Name, c3.ConsensusEndpoint()))
 	require.True(t, leader(t, ctx, c1))
@@ -226,15 +225,12 @@ func setupBatcher(t *testing.T, sys *System, conductors map[string]*conductor) {
 		RollupRpc:              rollupRpc,
 		MaxPendingTransactions: 0,
 		MaxChannelDuration:     1,
-		MaxL1TxSize:            240_000,
-		CompressorConfig: compressor.CLIConfig{
-			TargetL1TxSizeBytes: sys.Cfg.BatcherTargetL1TxSizeBytes,
-			TargetNumFrames:     1,
-			ApproxComprRatio:    0.4,
-		},
-		SubSafetyMargin: 4,
-		PollInterval:    1 * time.Second,
-		TxMgrConfig:     newTxMgrConfig(sys.EthInstances["l1"].WSEndpoint(), sys.Cfg.Secrets.Batcher),
+		MaxL1TxSize:            120_000,
+		TargetNumFrames:        1,
+		ApproxComprRatio:       0.4,
+		SubSafetyMargin:        4,
+		PollInterval:           1 * time.Second,
+		TxMgrConfig:            newTxMgrConfig(sys.EthInstances["l1"].WSEndpoint(), sys.Cfg.Secrets.Batcher),
 		LogConfig: oplog.CLIConfig{
 			Level:  log.LevelDebug,
 			Format: oplog.FormatText,
@@ -301,24 +297,56 @@ func sequencerCfg(rpcPort int) *rollupNode.Config {
 	}
 }
 
-func waitForLeadershipChange(t *testing.T, c *conductor, leader bool) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-			isLeader, err := c.client.Leader(ctx)
-			if err != nil {
-				return err
-			}
-			if isLeader == leader {
-				return nil
-			}
-			time.Sleep(500 * time.Millisecond)
+func waitForLeadership(t *testing.T, c *conductor) error {
+	condition := func() (bool, error) {
+		isLeader, err := c.client.Leader(context.Background())
+		if err != nil {
+			return false, err
 		}
+		return isLeader, nil
 	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	return wait.For(ctx, 1*time.Second, condition)
+}
+
+func waitForLeadershipChange(t *testing.T, prev *conductor, prevID string, conductors map[string]*conductor, sys *System) string {
+	condition := func() (bool, error) {
+		isLeader, err := prev.client.Leader(context.Background())
+		if err != nil {
+			return false, err
+		}
+		return !isLeader, nil
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	err := wait.For(ctx, 1*time.Second, condition)
+	require.NoError(t, err)
+
+	ensureOnlyOneLeader(t, sys, conductors)
+	newLeader, err := prev.client.LeaderWithID(ctx)
+	require.NoError(t, err)
+	require.NotEmpty(t, newLeader.ID)
+	require.NotEqual(t, prevID, newLeader.ID, "Expected a new leader")
+	require.NoError(t, waitForSequencerStatusChange(t, sys.RollupClient(newLeader.ID), true))
+
+	return newLeader.ID
+}
+
+func waitForSequencerStatusChange(t *testing.T, rollupClient *sources.RollupClient, active bool) error {
+	condition := func() (bool, error) {
+		isActive, err := rollupClient.SequencerActive(context.Background())
+		if err != nil {
+			return false, err
+		}
+		return isActive == active, nil
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	return wait.For(ctx, 1*time.Second, condition)
 }
 
 func leader(t *testing.T, ctx context.Context, con *conductor) bool {
@@ -372,4 +400,39 @@ func findLeader(t *testing.T, conductors map[string]*conductor) (string, *conduc
 		}
 	}
 	return "", nil
+}
+
+func findFollower(t *testing.T, conductors map[string]*conductor) (string, *conductor) {
+	for id, con := range conductors {
+		if !leader(t, context.Background(), con) {
+			return id, con
+		}
+	}
+	return "", nil
+}
+
+func ensureOnlyOneLeader(t *testing.T, sys *System, conductors map[string]*conductor) {
+	condition := func() (bool, error) {
+		leaders := 0
+		ctx := context.Background()
+		for name, con := range conductors {
+			leader, err := con.client.Leader(ctx)
+			if err != nil {
+				continue
+			}
+			active, err := sys.RollupClient(name).SequencerActive(ctx)
+			if err != nil {
+				continue
+			}
+
+			if leader && active {
+				leaders++
+			}
+		}
+		return leaders == 1, nil
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	require.NoError(t, wait.For(ctx, 1*time.Second, condition))
 }
