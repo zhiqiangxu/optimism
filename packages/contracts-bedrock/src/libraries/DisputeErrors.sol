@@ -27,8 +27,11 @@ error UnexpectedRootClaim(Claim rootClaim);
 /// @notice Thrown when a dispute game has already been initialized.
 error AlreadyInitialized();
 
-/// @notice Thrown when a supplied bond is too low to cover the cost of the interaction.
-error InsufficientBond();
+/// @notice Thrown when a supplied bond is not equal to the required bond amount to cover the cost of the interaction.
+error IncorrectBondAmount();
+
+/// @notice Thrown when a credit claim is attempted for a value of 0.
+error NoCreditToClaim();
 
 /// @notice Thrown when the transfer of credit to a recipient account reverts.
 error BondTransferFailed();
@@ -87,3 +90,17 @@ error ClaimAboveSplit();
 /// @notice Thrown on deployment if the split depth is greater than or equal to the max
 ///         depth of the game.
 error InvalidSplitDepth();
+
+/// @notice Thrown when trying to step against a claim for a second time, after it has already been countered with
+///         an instruction step.
+error DuplicateStep();
+
+/// @notice Thrown when an anchor root is not found for a given game type.
+error AnchorRootNotFound();
+
+////////////////////////////////////////////////////////////////
+//              `PermissionedDisputeGame` Errors              //
+////////////////////////////////////////////////////////////////
+
+/// @notice Thrown when an unauthorized address attempts to interact with the game.
+error BadAuth();
