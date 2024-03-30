@@ -418,5 +418,32 @@ contract LibPosition_Test is Test {
         r = p.rightIndex(maxDepth);
         assertEq(Position.unwrap(r), 31); // right gindex = 31
         assertEq(r.indexAtDepth(), 15); // trace index = 15
+
+        // test by alan
+        p = LibPosition.wrap(2, 3);
+        assertEq(Position.unwrap(p), 7);
+        assertEq(p.depth(), 2);
+        assertEq(p.indexAtDepth(), 3);
+
+        Position lsb;
+        assembly {
+            lsb := and(not(p), add(p, 1))
+        }
+        assertEq(lsb.raw(), 1 << 3);
+        assertEq(lsb.depth(), 3);
+
+        assertEq(p.traceAncestor().raw(), LibPosition.wrap(0, 0).raw());
+
+        p = LibPosition.wrap(4, 2);
+        assertEq(p.traceAncestor().raw(), LibPosition.wrap(4, 2).raw());
+        p = LibPosition.wrap(4, 3);
+        assertEq(p.traceAncestor().raw(), LibPosition.wrap(2, 0).raw());
+        p = LibPosition.wrap(4, 11);
+        assertEq(p.traceAncestor().raw(), LibPosition.wrap(2, 2).raw());
+        p = LibPosition.wrap(4, 9);
+        assertEq(p.traceAncestor().raw(), LibPosition.wrap(3, 4).raw());
+
+        p = LibPosition.wrap(4, 11);
+        assertEq(p.traceAncestorBounded(2).raw(), LibPosition.wrap(3, 5).raw());
     }
 }
