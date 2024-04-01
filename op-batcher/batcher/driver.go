@@ -23,6 +23,7 @@ import (
 )
 
 var ErrBatcherNotRunning = errors.New("batcher is not running")
+var ErrInboxTransactionFailed = errors.New("inbox transaction failed")
 
 type L1Client interface {
 	HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error)
@@ -68,7 +69,8 @@ type BatchSubmitter struct {
 	lastStoredBlock eth.BlockID
 	lastL1Tip       eth.L1BlockRef
 
-	state *channelManager
+	state      *channelManager
+	inboxIsEOA *bool
 }
 
 // NewBatchSubmitter initializes the BatchSubmitter driver from a preconfigured DriverSetup
@@ -469,12 +471,33 @@ func (l *BatchSubmitter) sendTransaction(ctx context.Context, txdata txData, que
 		candidate = l.calldataTxCandidate(data)
 	}
 
-	intrinsicGas, err := core.IntrinsicGas(candidate.TxData, nil, false, true, true, false)
-	if err != nil {
-		// we log instead of return an error here because txmgr can do its own gas estimation
-		l.Log.Error("Failed to calculate intrinsic gas", "err", err)
-	} else {
-		candidate.GasLimit = intrinsicGas
+	if *candidate.To != l.RollupConfig.BatchInboxAddress {
+		return fmt.Errorf("candidate.To is not inbox")
+	}
+	if l.inboxIsEOA == nil {
+		var l2Client dial.EthClientInterface
+		l2Client, err = l.EndpointProvider.EthClient(ctx)
+		if err != nil {
+			return fmt.Errorf("EthClient failed:%w", err)
+		}
+		var code []byte
+		code, err = l2Client.CodeAt(ctx, *candidate.To, nil)
+		if err != nil {
+			return fmt.Errorf("CodeAt failed:%w", err)
+		}
+		isEOA := len(code) == 0
+		l.inboxIsEOA = &isEOA
+	}
+
+	// only set GasLimit when inbox is EOA so that later on `EstimateGas` will be called
+	if *l.inboxIsEOA {
+		intrinsicGas, err := core.IntrinsicGas(candidate.TxData, nil, false, true, true, false)
+		if err != nil {
+			// we log instead of return an error here because txmgr can do its own gas estimation
+			l.Log.Error("Failed to calculate intrinsic gas", "err", err)
+		} else {
+			candidate.GasLimit = intrinsicGas
+		}
 	}
 
 	queue.Send(txdata.ID(), *candidate, receiptsCh)
@@ -510,6 +533,10 @@ func (l *BatchSubmitter) handleReceipt(r txmgr.TxReceipt[txID]) {
 	if r.Err != nil {
 		l.recordFailedTx(r.ID, r.Err)
 	} else {
+		if r.Receipt.Status == types.ReceiptStatusFailed {
+			l.recordFailedTx(r.ID, ErrInboxTransactionFailed)
+			return
+		}
 		l.recordConfirmedTx(r.ID, r.Receipt)
 	}
 }
