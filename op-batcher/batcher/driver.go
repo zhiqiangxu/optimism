@@ -489,7 +489,7 @@ func (l *BatchSubmitter) sendTransaction(ctx context.Context, txdata txData, que
 		l.inboxIsEOA = &isEOA
 	}
 
-	// only set GasLimit when inbox is EOA so that later on `EstimateGas` will be called
+	// only set GasLimit when inbox is EOA so that later on `EstimateGas` will be called if inbox is a contract
 	if *l.inboxIsEOA {
 		intrinsicGas, err := core.IntrinsicGas(candidate.TxData, nil, false, true, true, false)
 		if err != nil {
