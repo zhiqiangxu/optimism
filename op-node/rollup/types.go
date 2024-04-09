@@ -122,6 +122,20 @@ type Config struct {
 
 	// UsePlasma is activated when the chain is in plasma mode.
 	UsePlasma bool `json:"use_plasma"`
+
+	DACConfig *DACConfig `json:"dac_config,omitempty"`
+}
+
+type DACConfig struct {
+	URL string
+}
+
+type DACClient interface {
+	UploadBlobs(*eth.ExecutionPayloadEnvelope) error
+}
+
+func (dacConfig *DACConfig) Client() DACClient {
+	return nil
 }
 
 // ValidateL1Config checks L1 config variables for errors.
