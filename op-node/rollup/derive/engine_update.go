@@ -153,6 +153,7 @@ func confirmPayload(
 		return nil, BlockInsertPayloadErr, err
 	}
 	if envelope.BlobsBundle != nil && len(envelope.BlobsBundle.Blobs) > 0 {
+		// When updateSafe, it must be deriving instead of sequencing. Deriving is based on onchain-data which doesn't contain L2 blob.
 		if updateSafe {
 			return nil, BlockInsertPayloadErr, fmt.Errorf("got blobs when updateSafe")
 		}
