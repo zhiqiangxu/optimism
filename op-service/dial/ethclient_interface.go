@@ -4,7 +4,6 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
@@ -12,7 +11,6 @@ import (
 // It does not describe all of the functions an ethclient.Client has, only the ones used by callers of the L2 Providers
 type EthClientInterface interface {
 	BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error)
-	CodeAt(ctx context.Context, account common.Address, blockNumber *big.Int) ([]byte, error)
 
 	Close()
 }

@@ -17,6 +17,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-service/dial"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum-optimism/optimism/op-service/txmgr"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
@@ -27,6 +28,8 @@ var ErrInboxTransactionFailed = errors.New("inbox transaction failed")
 
 type L1Client interface {
 	HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error)
+
+	CodeAt(ctx context.Context, account common.Address, blockNumber *big.Int) ([]byte, error)
 }
 
 type L2Client interface {
@@ -475,13 +478,8 @@ func (l *BatchSubmitter) sendTransaction(ctx context.Context, txdata txData, que
 		return fmt.Errorf("candidate.To is not inbox")
 	}
 	if l.inboxIsEOA == nil {
-		var l2Client dial.EthClientInterface
-		l2Client, err = l.EndpointProvider.EthClient(ctx)
-		if err != nil {
-			return fmt.Errorf("EthClient failed:%w", err)
-		}
 		var code []byte
-		code, err = l2Client.CodeAt(ctx, *candidate.To, nil)
+		code, err = l.L1Client.CodeAt(ctx, *candidate.To, nil)
 		if err != nil {
 			return fmt.Errorf("CodeAt failed:%w", err)
 		}
