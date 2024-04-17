@@ -8,6 +8,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.27.11
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.53.1
 	github.com/aws/smithy-go v1.20.2
+	github.com/blockchaindevsh/da-server v0.0.0-20240417134222-7fe139875cd2
 	github.com/btcsuite/btcd v0.24.0
 	github.com/btcsuite/btcd/chaincfg/chainhash v1.1.0
 	github.com/cockroachdb/pebble v0.0.0-20231018212520-f6cde3fc2fa4
@@ -243,7 +244,6 @@ require (
 	github.com/vmihailenco/msgpack/v5 v5.3.5 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
-	github.com/yosssi/ace v0.0.5 // indirect
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect
 	go.uber.org/automaxprocs v1.5.2 // indirect
 	go.uber.org/dig v1.17.1 // indirect
@@ -265,7 +265,9 @@ require (
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
 
+require github.com/yosssi/ace v0.0.5 // indirect
+
 //replace github.com/ethereum/go-ethereum v1.13.9 => ../op-geth
-replace github.com/ethereum/go-ethereum v1.13.11 => github.com/zhiqiangxu/op-geth v0.0.0-20240415155130-02f00f84b166
+replace github.com/ethereum/go-ethereum v1.13.11 => github.com/zhiqiangxu/op-geth v0.0.0-20240417135939-268fd3fc22c9
 
 // replace github.com/ethereum-optimism/superchain-registry/superchain => ../superchain-registry/superchain

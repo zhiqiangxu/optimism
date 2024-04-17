@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/blockchaindevsh/da-server/pkg/da/client"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
@@ -135,7 +136,8 @@ type DACClient interface {
 }
 
 func (dacConfig *DACConfig) Client() DACClient {
-	return nil
+
+	return client.New(dacConfig.URL)
 }
 
 // ValidateL1Config checks L1 config variables for errors.
