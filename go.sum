@@ -242,6 +242,8 @@ github.com/ethereum/c-kzg-4844 v0.4.0 h1:3MS1s4JtA868KpJxroZoepdV0ZKBp3u/O5HcZ7R
 github.com/ethereum/c-kzg-4844 v0.4.0/go.mod h1:VewdlzQmpT5QSrVhbBuGoCdFJkpaJlO1aQputP83wc0=
 github.com/ethstorage/da-server v0.0.0-20240429093531-f5fc2a8c582a h1:C59AnsffCUa6C88c7TzLWN4ZsajDV7KkYPrNaebRF14=
 github.com/ethstorage/da-server v0.0.0-20240429093531-f5fc2a8c582a/go.mod h1:KNgfHcvd9o+y2SdqLb4XFySKCK5FGDd1VWjb6LQ4Z8U=
+github.com/ethstorage/da-server v0.0.0-20240429131756-431639da87c3 h1:YMfrPUWB/g8fN49+a2hafidGYlUne9vLvc1UgSyyn5I=
+github.com/ethstorage/da-server v0.0.0-20240429131756-431639da87c3/go.mod h1:KNgfHcvd9o+y2SdqLb4XFySKCK5FGDd1VWjb6LQ4Z8U=
 github.com/fatih/color v1.13.0 h1:8LOYc1KYPPmyKMuN8QV2DNRWNbLo6LZ0iLs8+mlH53w=
 github.com/fatih/color v1.13.0/go.mod h1:kLAiJbzzSOZDVNGyDpeOxJ47H46qBXwg5ILebYFFOfk=
 github.com/fatih/structs v1.1.0 h1:Q7juDM0QtcnhCpeyLGQKyg4TOIghuNXrkL32pHAUMxo=
