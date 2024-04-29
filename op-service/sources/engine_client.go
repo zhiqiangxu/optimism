@@ -127,7 +127,7 @@ func (s *EngineAPIClient) NewPayload(ctx context.Context, payload *eth.Execution
 	var err error
 	switch method := s.evp.NewPayloadVersion(uint64(payload.Timestamp)); method {
 	case eth.NewPayloadV3:
-		err = s.RPC.CallContext(execCtx, &result, string(method), payload, []common.Hash{}, parentBeaconBlockRoot)
+		err = s.RPC.CallContext(execCtx, &result, string(method), payload, nil /*pass nil to skip checking versionedHashes*/, parentBeaconBlockRoot)
 	case eth.NewPayloadV2:
 		err = s.RPC.CallContext(execCtx, &result, string(method), payload)
 	default:
