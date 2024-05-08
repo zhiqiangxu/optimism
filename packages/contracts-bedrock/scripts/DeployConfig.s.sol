@@ -7,10 +7,6 @@ import { stdJson } from "forge-std/StdJson.sol";
 import { Executables } from "scripts/Executables.sol";
 import { Chains } from "scripts/Chains.sol";
 
-// Global constant for the `useFaultProofs` slot in the DeployConfig contract, which can be overridden in the testing
-// environment.
-bytes32 constant USE_FAULT_PROOFS_SLOT = bytes32(uint256(63));
-
 /// @title DeployConfig
 /// @notice Represents the configuration required to deploy the system. It is expected
 ///         to read the file from JSON. A future improvement would be to have fallback
@@ -39,8 +35,10 @@ contract DeployConfig is Script {
     address public proxyAdminOwner;
     address public baseFeeVaultRecipient;
     uint256 public baseFeeVaultMinimumWithdrawalAmount;
+    uint256 public baseFeeVaultWithdrawalNetwork;
     address public l1FeeVaultRecipient;
     uint256 public l1FeeVaultMinimumWithdrawalAmount;
+    uint256 public l1FeeVaultWithdrawalNetwork;
     address public sequencerFeeVaultRecipient;
     uint256 public sequencerFeeVaultMinimumWithdrawalAmount;
     uint256 public sequencerFeeVaultWithdrawalNetwork;
@@ -48,7 +46,6 @@ contract DeployConfig is Script {
     string public governanceTokenSymbol;
     address public governanceTokenOwner;
     uint256 public l2GenesisBlockGasLimit;
-    uint256 public l2GenesisBlockBaseFeePerGas;
     uint256 public gasPriceOracleOverhead;
     uint256 public gasPriceOracleScalar;
     bool public enableGovernance;
@@ -59,7 +56,8 @@ contract DeployConfig is Script {
     bytes32 public faultGameGenesisOutputRoot;
     uint256 public faultGameMaxDepth;
     uint256 public faultGameSplitDepth;
-    uint256 public faultGameMaxDuration;
+    uint256 public faultGameClockExtension;
+    uint256 public faultGameMaxClockDuration;
     uint256 public faultGameWithdrawalDelay;
     uint256 public preimageOracleMinProposalSize;
     uint256 public preimageOracleChallengePeriod;
@@ -75,6 +73,9 @@ contract DeployConfig is Script {
     uint256 public daResolveWindow;
     uint256 public daBondSize;
     uint256 public daResolverRefundPercentage;
+
+    bool public useCustomGasToken;
+    address public customGasTokenAddress;
 
     function read(string memory _path) public {
         console.log("DeployConfig: reading file %s", _path);
@@ -101,12 +102,14 @@ contract DeployConfig is Script {
         l2OutputOracleProposer = stdJson.readAddress(_json, "$.l2OutputOracleProposer");
         l2OutputOracleChallenger = stdJson.readAddress(_json, "$.l2OutputOracleChallenger");
         finalizationPeriodSeconds = stdJson.readUint(_json, "$.finalizationPeriodSeconds");
-        fundDevAccounts = stdJson.readBool(_json, "$.fundDevAccounts");
+        fundDevAccounts = _readOr(_json, "$.fundDevAccounts", false);
         proxyAdminOwner = stdJson.readAddress(_json, "$.proxyAdminOwner");
         baseFeeVaultRecipient = stdJson.readAddress(_json, "$.baseFeeVaultRecipient");
         baseFeeVaultMinimumWithdrawalAmount = stdJson.readUint(_json, "$.baseFeeVaultMinimumWithdrawalAmount");
+        baseFeeVaultWithdrawalNetwork = stdJson.readUint(_json, "$.baseFeeVaultWithdrawalNetwork");
         l1FeeVaultRecipient = stdJson.readAddress(_json, "$.l1FeeVaultRecipient");
         l1FeeVaultMinimumWithdrawalAmount = stdJson.readUint(_json, "$.l1FeeVaultMinimumWithdrawalAmount");
+        l1FeeVaultWithdrawalNetwork = stdJson.readUint(_json, "$.l1FeeVaultWithdrawalNetwork");
         sequencerFeeVaultRecipient = stdJson.readAddress(_json, "$.sequencerFeeVaultRecipient");
         sequencerFeeVaultMinimumWithdrawalAmount = stdJson.readUint(_json, "$.sequencerFeeVaultMinimumWithdrawalAmount");
         sequencerFeeVaultWithdrawalNetwork = stdJson.readUint(_json, "$.sequencerFeeVaultWithdrawalNetwork");
@@ -114,7 +117,6 @@ contract DeployConfig is Script {
         governanceTokenSymbol = stdJson.readString(_json, "$.governanceTokenSymbol");
         governanceTokenOwner = stdJson.readAddress(_json, "$.governanceTokenOwner");
         l2GenesisBlockGasLimit = stdJson.readUint(_json, "$.l2GenesisBlockGasLimit");
-        l2GenesisBlockBaseFeePerGas = stdJson.readUint(_json, "$.l2GenesisBlockBaseFeePerGas");
         gasPriceOracleOverhead = stdJson.readUint(_json, "$.gasPriceOracleOverhead");
         gasPriceOracleScalar = stdJson.readUint(_json, "$.gasPriceOracleScalar");
         enableGovernance = stdJson.readBool(_json, "$.enableGovernance");
@@ -124,15 +126,16 @@ contract DeployConfig is Script {
         requiredProtocolVersion = stdJson.readUint(_json, "$.requiredProtocolVersion");
         recommendedProtocolVersion = stdJson.readUint(_json, "$.recommendedProtocolVersion");
 
-        useFaultProofs = stdJson.readBool(_json, "$.useFaultProofs");
-        proofMaturityDelaySeconds = stdJson.readUint(_json, "$.proofMaturityDelaySeconds");
-        disputeGameFinalityDelaySeconds = stdJson.readUint(_json, "$.disputeGameFinalityDelaySeconds");
-        respectedGameType = stdJson.readUint(_json, "$.respectedGameType");
+        useFaultProofs = _readOr(_json, "$.useFaultProofs", false);
+        proofMaturityDelaySeconds = _readOr(_json, "$.proofMaturityDelaySeconds", 0);
+        disputeGameFinalityDelaySeconds = _readOr(_json, "$.disputeGameFinalityDelaySeconds", 0);
+        respectedGameType = _readOr(_json, "$.respectedGameType", 0);
 
         faultGameAbsolutePrestate = stdJson.readUint(_json, "$.faultGameAbsolutePrestate");
         faultGameMaxDepth = stdJson.readUint(_json, "$.faultGameMaxDepth");
         faultGameSplitDepth = stdJson.readUint(_json, "$.faultGameSplitDepth");
-        faultGameMaxDuration = stdJson.readUint(_json, "$.faultGameMaxDuration");
+        faultGameClockExtension = stdJson.readUint(_json, "$.faultGameClockExtension");
+        faultGameMaxClockDuration = stdJson.readUint(_json, "$.faultGameMaxClockDuration");
         faultGameGenesisBlock = stdJson.readUint(_json, "$.faultGameGenesisBlock");
         faultGameGenesisOutputRoot = stdJson.readBytes32(_json, "$.faultGameGenesisOutputRoot");
         faultGameWithdrawalDelay = stdJson.readUint(_json, "$.faultGameWithdrawalDelay");
@@ -145,6 +148,9 @@ contract DeployConfig is Script {
         daResolveWindow = _readOr(_json, "$.daResolveWindow", 1000);
         daBondSize = _readOr(_json, "$.daBondSize", 1000000000);
         daResolverRefundPercentage = _readOr(_json, "$.daResolverRefundPercentage", 0);
+
+        useCustomGasToken = _readOr(_json, "$.useCustomGasToken", false);
+        customGasTokenAddress = _readOr(_json, "$.customGasTokenAddress", address(0));
     }
 
     function l1StartingBlockTag() public returns (bytes32) {
@@ -180,6 +186,22 @@ contract DeployConfig is Script {
         usePlasma = _usePlasma;
     }
 
+    /// @notice Allow the `useFaultProofs` config to be overridden in testing environments
+    function setUseFaultProofs(bool _useFaultProofs) public {
+        useFaultProofs = _useFaultProofs;
+    }
+
+    /// @notice Allow the `fundDevAccounts` config to be overridden.
+    function setFundDevAccounts(bool _fundDevAccounts) public {
+        fundDevAccounts = _fundDevAccounts;
+    }
+
+    /// @notice Allow the `useCustomGasToken` config to be overridden in testing environments
+    function setUseCustomGasToken(address _token) public {
+        useCustomGasToken = true;
+        customGasTokenAddress = _token;
+    }
+
     function _getBlockByTag(string memory _tag) internal returns (bytes32) {
         string[] memory cmd = new string[](3);
         cmd[0] = Executables.bash;
@@ -195,5 +217,9 @@ contract DeployConfig is Script {
 
     function _readOr(string memory json, string memory key, uint256 defaultValue) internal view returns (uint256) {
         return vm.keyExists(json, key) ? stdJson.readUint(json, key) : defaultValue;
+    }
+
+    function _readOr(string memory json, string memory key, address defaultValue) internal view returns (address) {
+        return vm.keyExists(json, key) ? stdJson.readAddress(json, key) : defaultValue;
     }
 }
