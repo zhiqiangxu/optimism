@@ -39,8 +39,14 @@ contract SoulQKC is ERC20Upgradeable {
     }
 
     /// @custom:legacy
-    /// @notice batchMint is used by anyone to mint SoulQKC in batch.
-    function batchMint(address[] calldata accounts, uint256[] calldata values) external payable {
+    /// @notice deposit is used by anyone to deposit native token for SoulQKC.
+    function deposit() external payable {
+        _mint(_msgSender(), msg.value);
+    }
+
+    /// @custom:legacy
+    /// @notice batchDeposit is used by anyone to deposit native token for SoulQKC in batch.
+    function batchDeposit(address[] calldata accounts, uint256[] calldata values) external payable {
         require(accounts.length == values.length, "invalid arguments");
 
         uint256 totalValue = 0;
