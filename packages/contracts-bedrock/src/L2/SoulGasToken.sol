@@ -103,14 +103,16 @@ contract SoulGasToken is ERC20Upgradeable, OwnableUpgradeable {
     }
 
     /// @custom:legacy
-    /// @notice batchMint is called by minters to mint SoulGasToken in batch when !_isSoulQKC.
+    /// @notice batchMint is called:
+    ///                        1. by EOA minters to mint SoulGasToken in batch when !_isSoulQKC.
+    ///                        2. by DEPOSITOR_ACCOUNT to refund SoulGasToken
     function batchMint(address[] calldata accounts, uint256[] calldata values) external {
         require(accounts.length == values.length, "invalid arguments");
 
         SoulGasTokenStorage storage $ = _getSoulGasTokenStorage();
         // batchMint should only be called when !_isSoulQKC, but we don't check it explicitly since it's ensured by
         // this _minters check
-        require($._minters[_msgSender()], "not a minter");
+        require(_msgSender() == Constants.DEPOSITOR_ACCOUNT || $._minters[_msgSender()], "not a minter");
 
         for (uint256 i = 0; i < accounts.length; i++) {
             _mint(accounts[i], values[i]);
@@ -166,7 +168,7 @@ contract SoulGasToken is ERC20Upgradeable, OwnableUpgradeable {
     }
 
     /// @custom:legacy
-    /// @notice burnFrom is called by the burner to burn SoulGasToken.
+    /// @notice burnFrom is called by the burner or DEPOSITOR_ACCOUNT to burn SoulGasToken.
     function burnFrom(address account, uint256 value) external {
         SoulGasTokenStorage storage $ = _getSoulGasTokenStorage();
         require(_msgSender() == Constants.DEPOSITOR_ACCOUNT || $._burners[_msgSender()], "not the burner");
