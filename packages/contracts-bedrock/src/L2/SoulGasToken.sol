@@ -110,8 +110,6 @@ contract SoulGasToken is ERC20Upgradeable, OwnableUpgradeable {
         require(accounts.length == values.length, "invalid arguments");
 
         SoulGasTokenStorage storage $ = _getSoulGasTokenStorage();
-        // batchMint should only be called when !_isSoulQKC, but we don't check it explicitly since it's ensured by
-        // this _minters check
         require(_msgSender() == Constants.DEPOSITOR_ACCOUNT || $._minters[_msgSender()], "not a minter");
 
         for (uint256 i = 0; i < accounts.length; i++) {
@@ -168,7 +166,9 @@ contract SoulGasToken is ERC20Upgradeable, OwnableUpgradeable {
     }
 
     /// @custom:legacy
-    /// @notice burnFrom is called by the burner or DEPOSITOR_ACCOUNT to burn SoulGasToken.
+    /// @notice burnFrom is called:
+    ///                             1. by the burner to burn SoulGasToken.
+    ///                             2. by DEPOSITOR_ACCOUNT to burn SoulGasToken.
     function burnFrom(address account, uint256 value) external {
         SoulGasTokenStorage storage $ = _getSoulGasTokenStorage();
         require(_msgSender() == Constants.DEPOSITOR_ACCOUNT || $._burners[_msgSender()], "not the burner");
