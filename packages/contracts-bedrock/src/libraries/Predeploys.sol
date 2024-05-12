@@ -74,8 +74,8 @@ library Predeploys {
     /// @notice Address of the EAS predeploy.
     address internal constant EAS = 0x4200000000000000000000000000000000000021;
 
-    /// @notice Address of the SoulETH predeploy.
-    address internal constant SoulETH = 0x42000000000000000000000000000000000000FE;
+    /// @notice Address of the SOUL_GAS_TOKEN predeploy.
+    address internal constant SOUL_GAS_TOKEN = 0x42000000000000000000000000000000000000FE;
 
     /// @notice Address of the GovernanceToken predeploy.
     address internal constant GOVERNANCE_TOKEN = 0x4200000000000000000000000000000000000042;
@@ -118,6 +118,7 @@ library Predeploys {
         if (_addr == LEGACY_ERC20_ETH) return "LegacyERC20ETH";
         if (_addr == CROSS_L2_INBOX) return "CrossL2Inbox";
         if (_addr == L2_TO_L2_CROSS_DOMAIN_MESSENGER) return "L2ToL2CrossDomainMessenger";
+        if (_addr == SOUL_GAS_TOKEN) return "SoulGasToken";
         revert("Predeploys: unnamed predeploy");
     }
 
@@ -133,7 +134,8 @@ library Predeploys {
             || _addr == SEQUENCER_FEE_WALLET || _addr == OPTIMISM_MINTABLE_ERC20_FACTORY || _addr == L1_BLOCK_NUMBER
             || _addr == L2_ERC721_BRIDGE || _addr == L1_BLOCK_ATTRIBUTES || _addr == L2_TO_L1_MESSAGE_PASSER
             || _addr == OPTIMISM_MINTABLE_ERC721_FACTORY || _addr == PROXY_ADMIN || _addr == BASE_FEE_VAULT
-            || _addr == L1_FEE_VAULT || _addr == SCHEMA_REGISTRY || _addr == EAS || _addr == GOVERNANCE_TOKEN;
+            || _addr == L1_FEE_VAULT || _addr == SCHEMA_REGISTRY || _addr == EAS || _addr == GOVERNANCE_TOKEN
+            || _addr == SOUL_GAS_TOKEN;
     }
 
     function isPredeployNamespace(address _addr) internal pure returns (bool) {

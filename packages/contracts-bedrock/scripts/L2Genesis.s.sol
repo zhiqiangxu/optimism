@@ -10,6 +10,7 @@ import { Artifacts } from "scripts/Artifacts.s.sol";
 import { DeployConfig } from "scripts/DeployConfig.s.sol";
 import { Predeploys } from "src/libraries/Predeploys.sol";
 import { Preinstalls } from "src/libraries/Preinstalls.sol";
+import { Constants } from "src/libraries/Constants.sol";
 import { L2CrossDomainMessenger } from "src/L2/L2CrossDomainMessenger.sol";
 import { L1Block } from "src/L2/L1Block.sol";
 import { GasPriceOracle } from "src/L2/GasPriceOracle.sol";
@@ -20,6 +21,7 @@ import { OptimismMintableERC20Factory } from "src/universal/OptimismMintableERC2
 import { OptimismMintableERC721Factory } from "src/universal/OptimismMintableERC721Factory.sol";
 import { BaseFeeVault } from "src/L2/BaseFeeVault.sol";
 import { L1FeeVault } from "src/L2/L1FeeVault.sol";
+import { SoulGasToken } from "src/L2/SoulGasToken.sol";
 import { GovernanceToken } from "src/governance/GovernanceToken.sol";
 import { L1CrossDomainMessenger } from "src/L1/L1CrossDomainMessenger.sol";
 import { L1StandardBridge } from "src/L1/L1StandardBridge.sol";
@@ -230,6 +232,7 @@ contract L2Genesis is Deployer {
         // 1B,1C,1D,1E,1F: not used.
         setSchemaRegistry(); // 20
         setEAS(); // 21
+        setSoulGasToken(); // FE
         setGovernanceToken(); // 42: OP (not behind a proxy)
     }
 
@@ -247,6 +250,44 @@ contract L2Genesis is Deployer {
 
     function setL2ToL1MessagePasser() public {
         _setImplementationCode(Predeploys.L2_TO_L1_MESSAGE_PASSER);
+    }
+
+    function setSoulGasToken() public {
+        address impl = _setImplementationCode(Predeploys.SOUL_GAS_TOKEN);
+
+        if (Constants.IS_SOUL_QKC) {
+            SoulGasToken(payable(impl)).initialize({
+                name: "SoulQKC",
+                symbol_: "SoulQKC",
+                owner_: address(0),
+                minters_: new address[](0),
+                burners_: new address[](0)
+            });
+
+            SoulGasToken(payable(Predeploys.SOUL_GAS_TOKEN)).initialize({
+                name: "SoulQKC",
+                symbol_: "SoulQKC",
+                owner_: address(0),
+                minters_: new address[](0),
+                burners_: new address[](0),
+            });
+        } else {
+            SoulGasToken(payable(impl)).initialize({
+                name: "SoulETH",
+                symbol_: "SoulETH",
+                owner_: cfg.proxyAdminOwner(),
+                minters_: new address[](0),
+                burners_: new address[](0)
+            });
+
+            SoulGasToken(payable(Predeploys.SOUL_GAS_TOKEN)).initialize({
+                name: "SoulETH",
+                symbol_: "SoulETH",
+                owner_: cfg.proxyAdminOwner(),
+                minters_: new address[](0),
+                burners_: new address[](0),
+            });
+        }
     }
 
     /// @notice This predeploy is following the safety invariant #1.

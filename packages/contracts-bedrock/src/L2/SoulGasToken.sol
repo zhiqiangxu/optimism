@@ -53,8 +53,6 @@ contract SoulGasToken is ERC20Upgradeable, OwnableUpgradeable {
             require(burners_.length == 0, "burners_ should be empty when isSoulQKC_");
         } else {
             require(owner_ != address(0), "owner_ should not be zero when !isSoulQKC_");
-            require(minters_.length != 0, "minters_ should not be empty when !isSoulQKC_");
-            require(burners_.length != 0, "burners_ should not be empty when !isSoulQKC_");
         }
 
         // even though owner is only used when Constants.IS_SOUL_QKC, we always initialize the inherited
