@@ -1025,8 +1025,8 @@ func TestEcotone(t *testing.T) {
 	}
 }
 
-func TestSoulETH(t *testing.T) {
-	t.Run("no SoulETH", func(t *testing.T) {
+func TestSoulGasToken(t *testing.T) {
+	t.Run("no SoulGasToken", func(t *testing.T) {
 		InitParallel(t)
 		cfg := DefaultSystemConfig(t)
 
@@ -1059,7 +1059,7 @@ func TestSoulETH(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, balanceBefore.Cmp(balanceAfter) > 0)
 	})
-	t.Run("have SoulETH but not enough", func(t *testing.T) {
+	t.Run("have SoulGasToken but not enough", func(t *testing.T) {
 		InitParallel(t)
 		cfg := DefaultSystemConfig(t)
 
@@ -1070,10 +1070,10 @@ func TestSoulETH(t *testing.T) {
 		require.NoError(t, err)
 		defer opGeth.Close()
 
-		// mint tiny amount of SoulETH with deposit tx
+		// mint tiny amount of SoulGasToken with deposit tx
 		mintTx := types.NewTx(&types.DepositTx{
-			From:  core.SoulMinter,
-			To:    &types.SoulETHAddr,
+			From:  derive.L1InfoDepositerAddress,
+			To:    &types.SoulGasTokenAddr,
 			Value: big.NewInt(0),
 			Gas:   1000001,
 			Data:  core.MintSoulBalanceData(cfg.Secrets.Addresses().Bob, big.NewInt(1)),
@@ -1105,7 +1105,7 @@ func TestSoulETH(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, balanceAfter.Cmp(balanceBefore) > 0)
 	})
-	t.Run("have SoulETH and enough", func(t *testing.T) {
+	t.Run("have SoulGasToken and enough", func(t *testing.T) {
 		InitParallel(t)
 		cfg := DefaultSystemConfig(t)
 
@@ -1116,10 +1116,10 @@ func TestSoulETH(t *testing.T) {
 		require.NoError(t, err)
 		defer opGeth.Close()
 
-		// mint enough SoulETH with deposit tx
+		// mint enough SoulGasToken with deposit tx
 		mintTx := types.NewTx(&types.DepositTx{
-			From:  core.SoulMinter,
-			To:    &types.SoulETHAddr,
+			From:  derive.L1InfoDepositerAddress,
+			To:    &types.SoulGasTokenAddr,
 			Value: big.NewInt(0),
 			Gas:   1000001,
 			Data:  core.MintSoulBalanceData(cfg.Secrets.Addresses().Bob, big.NewInt(params.Ether)),
