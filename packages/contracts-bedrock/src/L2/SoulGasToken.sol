@@ -47,12 +47,19 @@ contract SoulGasToken is ERC20Upgradeable, OwnableUpgradeable {
         external
         initializer
     {
-        if (isSoulQKC_) {
-            require(owner_ == address(0), "owner_ should be zero when isSoulQKC_");
-            require(minters_.length == 0, "minters_ should be empty when isSoulQKC_");
-            require(burners_.length == 0, "burners_ should be empty when isSoulQKC_");
+        if (Constants.IS_SOUL_QKC) {
+            // when Constants.IS_SOUL_QKC, we want owner_ to be a dead account, we choose DEPOSITOR_ACCOUNT since
+            // transferOwnership doesn't accept zero address
+            require(
+                owner_ == Constants.DEPOSITOR_ACCOUNT, "owner_ should be DEPOSITOR_ACCOUNT when Constants.IS_SOUL_QKC"
+            );
+            require(minters_.length == 0, "minters_ should be empty when Constants.IS_SOUL_QKC");
+            require(burners_.length == 0, "burners_ should be empty when Constants.IS_SOUL_QKC");
         } else {
-            require(owner_ != address(0), "owner_ should not be zero when !isSoulQKC_");
+            require(
+                owner_ != Constants.DEPOSITOR_ACCOUNT && owner_ != address(0),
+                "owner_ should not be neither DEPOSITOR_ACCOUNT nor zero when !Constants.IS_SOUL_QKC"
+            );
         }
 
         // even though owner is only used when Constants.IS_SOUL_QKC, we always initialize the inherited
@@ -75,7 +82,6 @@ contract SoulGasToken is ERC20Upgradeable, OwnableUpgradeable {
     /// @custom:legacy
     /// @notice deposit can be called by anyone to deposit native token for SoulGasToken when Constants.IS_SOUL_QKC.
     function deposit() external payable {
-        SoulGasTokenStorage storage $ = _getSoulGasTokenStorage();
         require(Constants.IS_SOUL_QKC, "deposit should only be called when Constants.IS_SOUL_QKC");
 
         _mint(_msgSender(), msg.value);
@@ -87,7 +93,6 @@ contract SoulGasToken is ERC20Upgradeable, OwnableUpgradeable {
     function batchDeposit(address[] calldata accounts, uint256[] calldata values) external payable {
         require(accounts.length == values.length, "invalid arguments");
 
-        SoulGasTokenStorage storage $ = _getSoulGasTokenStorage();
         require(Constants.IS_SOUL_QKC, "batchDeposit should only be called when Constants.IS_SOUL_QKC");
 
         uint256 totalValue = 0;
