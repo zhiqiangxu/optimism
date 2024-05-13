@@ -255,37 +255,29 @@ contract L2Genesis is Deployer {
     function setSoulGasToken() public {
         address impl = _setImplementationCode(Predeploys.SOUL_GAS_TOKEN);
 
-        if (Constants.IS_SOUL_QKC) {
+        if (Constants.IS_SOUL_BACKED_BY_NATIVE) {
             SoulGasToken(payable(impl)).initialize({
                 name_: "SoulQKC",
                 symbol_: "SoulQKC",
-                owner_: Constants.DEPOSITOR_ACCOUNT,
-                minters_: new address[](0),
-                burners_: new address[](0)
+                owner_: Constants.DEPOSITOR_ACCOUNT
             });
 
             SoulGasToken(payable(Predeploys.SOUL_GAS_TOKEN)).initialize({
                 name_: "SoulQKC",
                 symbol_: "SoulQKC",
-                owner_: Constants.DEPOSITOR_ACCOUNT,
-                minters_: new address[](0),
-                burners_: new address[](0)
+                owner_: Constants.DEPOSITOR_ACCOUNT
             });
         } else {
             SoulGasToken(payable(impl)).initialize({
                 name_: "SoulETH",
                 symbol_: "SoulETH",
-                owner_: cfg.proxyAdminOwner(),
-                minters_: new address[](0),
-                burners_: new address[](0)
+                owner_: cfg.proxyAdminOwner()
             });
 
             SoulGasToken(payable(Predeploys.SOUL_GAS_TOKEN)).initialize({
                 name_: "SoulETH",
                 symbol_: "SoulETH",
-                owner_: cfg.proxyAdminOwner(),
-                minters_: new address[](0),
-                burners_: new address[](0)
+                owner_: cfg.proxyAdminOwner()
             });
         }
     }

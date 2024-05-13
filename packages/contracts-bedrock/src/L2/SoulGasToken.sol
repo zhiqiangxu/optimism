@@ -8,16 +8,16 @@ import { Constants } from "src/libraries/Constants.sol";
 /// @title SoulGasToken
 /// @notice The SoulGasToken is a soul-bounded ERC20 contract which cab be used to pay gas on L2.
 ///         It has 2 modes:
-///             1. when Constants.IS_SOUL_QKC(or in other words: SoulQKC mode), the token can be minted by anyone
-///                depositing native token into the contract.
-///             2. when !Constants.IS_SOUL_QKC(or in other words: SoulETH mode), the token can only be minted by
-///                whitelist minters specified by contract owner.
+///             1. when Constants.IS_SOUL_BACKED_BY_NATIVE(or in other words: SoulQKC mode), the token can be minted by
+///                anyone depositing native token into the contract.
+///             2. when !Constants.IS_SOUL_BACKED_BY_NATIVE(or in other words: SoulETH mode), the token can only be
+///                minted by whitelist minters specified by contract owner.
 contract SoulGasToken is ERC20Upgradeable, OwnableUpgradeable {
     /// @custom:storage-location erc7201:openzeppelin.storage.SoulGasToken
     struct SoulGasTokenStorage {
-        // _minters are be whitelist EOAs, only used when !Constants.IS_SOUL_QKC
+        // _minters are be whitelist EOAs, only used when !Constants.IS_SOUL_BACKED_BY_NATIVE
         mapping(address => bool) _minters;
-        // _burners are whitelist EOAs, only used when !Constants.IS_SOUL_QKC
+        // _burners are whitelist EOAs, only used when !Constants.IS_SOUL_BACKED_BY_NATIVE
         mapping(address => bool) _burners;
     }
 
@@ -37,63 +37,50 @@ contract SoulGasToken is ERC20Upgradeable, OwnableUpgradeable {
 
     /// @custom:legacy
     /// @notice initialize is used to initialize SoulGasToken contract.
-    function initialize(
-        string calldata name_,
-        string calldata symbol_,
-        address owner_,
-        address[] calldata minters_,
-        address[] calldata burners_
-    )
-        external
-        initializer
-    {
-        if (Constants.IS_SOUL_QKC) {
-            // when Constants.IS_SOUL_QKC, we want owner_ to be a dead account, we choose DEPOSITOR_ACCOUNT since
-            // transferOwnership doesn't accept zero address
+    function initialize(string calldata name_, string calldata symbol_, address owner_) external initializer {
+        if (Constants.IS_SOUL_BACKED_BY_NATIVE) {
+            // when Constants.IS_SOUL_BACKED_BY_NATIVE, we want owner_ to be a dead account, we choose DEPOSITOR_ACCOUNT
+            // since transferOwnership doesn't accept zero address
             require(
-                owner_ == Constants.DEPOSITOR_ACCOUNT, "owner_ should be DEPOSITOR_ACCOUNT when Constants.IS_SOUL_QKC"
+                owner_ == Constants.DEPOSITOR_ACCOUNT,
+                "owner_ should be DEPOSITOR_ACCOUNT when Constants.IS_SOUL_BACKED_BY_NATIVE"
             );
-            require(minters_.length == 0, "minters_ should be empty when Constants.IS_SOUL_QKC");
-            require(burners_.length == 0, "burners_ should be empty when Constants.IS_SOUL_QKC");
         } else {
             require(
                 owner_ != Constants.DEPOSITOR_ACCOUNT && owner_ != address(0),
-                "owner_ should not be neither DEPOSITOR_ACCOUNT nor zero when !Constants.IS_SOUL_QKC"
+                "owner_ should not be neither DEPOSITOR_ACCOUNT nor zero when !Constants.IS_SOUL_BACKED_BY_NATIVE"
             );
         }
 
-        // even though owner is only used when Constants.IS_SOUL_QKC, we always initialize the inherited
+        // even though owner is only used when Constants.IS_SOUL_BACKED_BY_NATIVE, we always initialize the inherited
         // OwnableUpgradeable
         __Ownable_init();
         transferOwnership(owner_);
         // initialize the inherited ERC20Upgradeable
         __ERC20_init(name_, symbol_);
-
-        SoulGasTokenStorage storage $ = _getSoulGasTokenStorage();
-        uint256 i;
-        for (i = 0; i < minters_.length; i++) {
-            $._minters[minters_[i]] = true;
-        }
-        for (i = 0; i < burners_.length; i++) {
-            $._burners[burners_[i]] = true;
-        }
     }
 
     /// @custom:legacy
-    /// @notice deposit can be called by anyone to deposit native token for SoulGasToken when Constants.IS_SOUL_QKC.
+    /// @notice deposit can be called by anyone to deposit native token for SoulGasToken when
+    /// Constants.IS_SOUL_BACKED_BY_NATIVE.
     function deposit() external payable {
-        require(Constants.IS_SOUL_QKC, "deposit should only be called when Constants.IS_SOUL_QKC");
+        require(
+            Constants.IS_SOUL_BACKED_BY_NATIVE, "deposit should only be called when Constants.IS_SOUL_BACKED_BY_NATIVE"
+        );
 
         _mint(_msgSender(), msg.value);
     }
 
     /// @custom:legacy
     /// @notice batchDeposit can be called by anyone to deposit native token for SoulGasToken in batch when
-    /// Constants.IS_SOUL_QKC.
+    /// Constants.IS_SOUL_BACKED_BY_NATIVE.
     function batchDeposit(address[] calldata accounts, uint256[] calldata values) external payable {
         require(accounts.length == values.length, "invalid arguments");
 
-        require(Constants.IS_SOUL_QKC, "batchDeposit should only be called when Constants.IS_SOUL_QKC");
+        require(
+            Constants.IS_SOUL_BACKED_BY_NATIVE,
+            "batchDeposit should only be called when Constants.IS_SOUL_BACKED_BY_NATIVE"
+        );
 
         uint256 totalValue = 0;
         for (uint256 i = 0; i < accounts.length; i++) {
@@ -105,7 +92,7 @@ contract SoulGasToken is ERC20Upgradeable, OwnableUpgradeable {
 
     /// @custom:legacy
     /// @notice batchMint is called:
-    ///                        1. by EOA minters to mint SoulGasToken in batch when !Constants.IS_SOUL_QKC.
+    ///                        1. by EOA minters to mint SoulGasToken in batch when !Constants.IS_SOUL_BACKED_BY_NATIVE.
     ///                        2. by DEPOSITOR_ACCOUNT to refund SoulGasToken
     function batchMint(address[] calldata accounts, uint256[] calldata values) external {
         require(accounts.length == values.length, "invalid arguments");
@@ -119,11 +106,10 @@ contract SoulGasToken is ERC20Upgradeable, OwnableUpgradeable {
     }
 
     /// @custom:legacy
-    /// @notice addMinters is called by the owner to add minters when !Constants.IS_SOUL_QKC.
+    /// @notice addMinters is called by the owner to add minters when !Constants.IS_SOUL_BACKED_BY_NATIVE.
     function addMinters(address[] calldata minters_) external onlyOwner {
-        // addMinters should only be called when !Constants.IS_SOUL_QKC, but we don't check it explicitly since it's
-        // ensured by
-        // onlyOwner
+        // addMinters should only be called when !Constants.IS_SOUL_BACKED_BY_NATIVE, but we don't check it explicitly
+        // since it's ensured by onlyOwner
         SoulGasTokenStorage storage $ = _getSoulGasTokenStorage();
         uint256 i;
         for (i = 0; i < minters_.length; i++) {
@@ -132,10 +118,10 @@ contract SoulGasToken is ERC20Upgradeable, OwnableUpgradeable {
     }
 
     /// @custom:legacy
-    /// @notice delMinters is called by the owner to delete minters when !Constants.IS_SOUL_QKC.
+    /// @notice delMinters is called by the owner to delete minters when !Constants.IS_SOUL_BACKED_BY_NATIVE.
     function delMinters(address[] calldata minters_) external onlyOwner {
-        // delMinters should only be called when !Constants.IS_SOUL_QKC, but we don't check it explicitly since it's
-        // ensured by onlyOwner
+        // delMinters should only be called when !Constants.IS_SOUL_BACKED_BY_NATIVE, but we don't check it explicitly
+        // since it's ensured by onlyOwner
         SoulGasTokenStorage storage $ = _getSoulGasTokenStorage();
         uint256 i;
         for (i = 0; i < minters_.length; i++) {
@@ -144,10 +130,10 @@ contract SoulGasToken is ERC20Upgradeable, OwnableUpgradeable {
     }
 
     /// @custom:legacy
-    /// @notice addBurners is called by the owner to add burners when !Constants.IS_SOUL_QKC.
+    /// @notice addBurners is called by the owner to add burners when !Constants.IS_SOUL_BACKED_BY_NATIVE.
     function addBurners(address[] calldata burners_) external onlyOwner {
-        // addBurners should only be called when !Constants.IS_SOUL_QKC, but we don't check it explicitly since it's
-        // ensured by onlyOwner
+        // addBurners should only be called when !Constants.IS_SOUL_BACKED_BY_NATIVE, but we don't check it explicitly
+        // since it's ensured by onlyOwner
         SoulGasTokenStorage storage $ = _getSoulGasTokenStorage();
         uint256 i;
         for (i = 0; i < burners_.length; i++) {
@@ -156,10 +142,10 @@ contract SoulGasToken is ERC20Upgradeable, OwnableUpgradeable {
     }
 
     /// @custom:legacy
-    /// @notice delBurners is called by the owner to delete burners when !Constants.IS_SOUL_QKC.
+    /// @notice delBurners is called by the owner to delete burners when !Constants.IS_SOUL_BACKED_BY_NATIVE.
     function delBurners(address[] calldata burners_) external onlyOwner {
-        // delBurners should only be called when !Constants.IS_SOUL_QKC, but we don't check it explicitly since it's
-        // ensured by onlyOwner
+        // delBurners should only be called when !Constants.IS_SOUL_BACKED_BY_NATIVE, but we don't check it explicitly
+        // since it's ensured by onlyOwner
         SoulGasTokenStorage storage $ = _getSoulGasTokenStorage();
         uint256 i;
         for (i = 0; i < burners_.length; i++) {
