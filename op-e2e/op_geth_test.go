@@ -1072,19 +1072,24 @@ func TestSoulGasToken(t *testing.T) {
 
 		// mint tiny amount of SoulGasToken with deposit tx
 		mintTx := types.NewTx(&types.DepositTx{
-			From:  derive.L1InfoDepositerAddress,
+			From:  cfg.Secrets.Addresses().Bob,
 			To:    &types.SoulGasTokenAddr,
-			Value: big.NewInt(0),
+			Value: big.NewInt(1),
 			Gas:   1000001,
-			Data:  core.MintSoulBalanceData(cfg.Secrets.Addresses().Bob, big.NewInt(1)),
+			Data:  core.SoulGasTokenABI.Methods["deposit"].ID,
 		})
 
-		balanceBefore, err := opGeth.L2Client.BalanceAt(context.Background(), cfg.Secrets.Addresses().Bob, nil)
+		_, err = opGeth.AddL2Block(ctx, mintTx)
 		require.NoError(t, err)
+
+		receipt, err := opGeth.L2Client.TransactionReceipt(ctx, mintTx.Hash())
+		require.NoError(t, err)
+		assert.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
+
 		signer := types.LatestSigner(opGeth.L2ChainConfig)
 		tx := types.MustSignNewTx(cfg.Secrets.Bob, signer, &types.DynamicFeeTx{
 			ChainID:   big.NewInt(int64(cfg.DeployConfig.L2ChainID)),
-			Nonce:     0,
+			Nonce:     1,
 			GasTipCap: big.NewInt(100),
 			GasFeeCap: big.NewInt(100000),
 			Gas:       1_000_001,
@@ -1093,17 +1098,19 @@ func TestSoulGasToken(t *testing.T) {
 			Data:      nil,
 		})
 
-		_, err = opGeth.AddL2Block(ctx, mintTx, tx)
+		balanceBefore, err := opGeth.L2Client.BalanceAt(context.Background(), cfg.Secrets.Addresses().Bob, nil)
+		require.NoError(t, err)
+		_, err = opGeth.AddL2Block(ctx, tx)
 		require.NoError(t, err)
 
-		receipt, err := opGeth.L2Client.TransactionReceipt(ctx, mintTx.Hash())
+		receipt, err = opGeth.L2Client.TransactionReceipt(ctx, tx.Hash())
 		require.NoError(t, err)
 		assert.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
 
 		// check gas is deducted from native balance
 		balanceAfter, err := opGeth.L2Client.BalanceAt(context.Background(), cfg.Secrets.Addresses().Bob, nil)
 		require.NoError(t, err)
-		require.True(t, balanceAfter.Cmp(balanceBefore) > 0)
+		require.True(t, balanceAfter.Cmp(balanceBefore) < 0)
 	})
 	t.Run("have SoulGasToken and enough", func(t *testing.T) {
 		InitParallel(t)
@@ -1118,21 +1125,26 @@ func TestSoulGasToken(t *testing.T) {
 
 		// mint enough SoulGasToken with deposit tx
 		mintTx := types.NewTx(&types.DepositTx{
-			From:  derive.L1InfoDepositerAddress,
+			From:  cfg.Secrets.Addresses().Bob,
 			To:    &types.SoulGasTokenAddr,
-			Value: big.NewInt(0),
+			Value: big.NewInt(params.Ether),
 			Gas:   1000001,
-			Data:  core.MintSoulBalanceData(cfg.Secrets.Addresses().Bob, big.NewInt(params.Ether)),
+			Data:  core.SoulGasTokenABI.Methods["deposit"].ID,
 		})
+		_, err = opGeth.AddL2Block(ctx, mintTx)
+		require.NoError(t, err)
+
+		receipt, err := opGeth.L2Client.TransactionReceipt(ctx, mintTx.Hash())
+		require.NoError(t, err)
+		assert.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
 
 		signer := types.LatestSigner(opGeth.L2ChainConfig)
 
-		fromAddr := cfg.Secrets.Addresses().Bob
-		balanceBefore, err := opGeth.L2Client.BalanceAt(ctx, fromAddr, nil)
+		balanceBefore, err := opGeth.L2Client.BalanceAt(ctx, cfg.Secrets.Addresses().Bob, nil)
 		require.NoError(t, err)
 		tx := types.MustSignNewTx(cfg.Secrets.Bob, signer, &types.DynamicFeeTx{
 			ChainID:   big.NewInt(int64(cfg.DeployConfig.L2ChainID)),
-			Nonce:     0,
+			Nonce:     1,
 			GasTipCap: big.NewInt(100),
 			GasFeeCap: big.NewInt(100000),
 			Gas:       1_000_001,
@@ -1140,16 +1152,15 @@ func TestSoulGasToken(t *testing.T) {
 			Value:     big.NewInt(0),
 			Data:      nil,
 		})
-
-		_, err = opGeth.AddL2Block(ctx, mintTx, tx)
+		_, err = opGeth.AddL2Block(ctx, tx)
 		require.NoError(t, err)
 
-		receipt, err := opGeth.L2Client.TransactionReceipt(ctx, mintTx.Hash())
+		receipt, err = opGeth.L2Client.TransactionReceipt(ctx, tx.Hash())
 		require.NoError(t, err)
 		assert.Equal(t, types.ReceiptStatusSuccessful, receipt.Status)
 
 		// check gas is not deducted from native balance
-		balanceAfter, err := opGeth.L2Client.BalanceAt(ctx, fromAddr, nil)
+		balanceAfter, err := opGeth.L2Client.BalanceAt(ctx, cfg.Secrets.Addresses().Bob, nil)
 		require.NoError(t, err)
 		require.True(t, balanceBefore.Cmp(balanceAfter) == 0)
 	})
