@@ -257,26 +257,26 @@ contract L2Genesis is Deployer {
 
         if (Constants.IS_SOUL_BACKED_BY_NATIVE) {
             SoulGasToken(payable(impl)).initialize({
-                name_: "SoulQKC",
-                symbol_: "SoulQKC",
+                name_: "SoulGasToken",
+                symbol_: "SoulGasToken",
                 owner_: Constants.DEPOSITOR_ACCOUNT
             });
 
             SoulGasToken(payable(Predeploys.SOUL_GAS_TOKEN)).initialize({
-                name_: "SoulQKC",
-                symbol_: "SoulQKC",
+                name_: "SoulGasToken",
+                symbol_: "SoulGasToken",
                 owner_: Constants.DEPOSITOR_ACCOUNT
             });
         } else {
             SoulGasToken(payable(impl)).initialize({
-                name_: "SoulETH",
-                symbol_: "SoulETH",
+                name_: "SoulGasToken",
+                symbol_: "SoulGasToken",
                 owner_: cfg.proxyAdminOwner()
             });
 
             SoulGasToken(payable(Predeploys.SOUL_GAS_TOKEN)).initialize({
-                name_: "SoulETH",
-                symbol_: "SoulETH",
+                name_: "SoulGasToken",
+                symbol_: "SoulGasToken",
                 owner_: cfg.proxyAdminOwner()
             });
         }
