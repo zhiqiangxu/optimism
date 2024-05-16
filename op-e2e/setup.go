@@ -230,6 +230,9 @@ type SystemConfig struct {
 	// MaxPendingTransactions determines how many transactions the batcher will try to send
 	// concurrently. 0 means unlimited.
 	MaxPendingTransactions uint64
+
+	EnableSoulGasToken   bool
+	IsSoulBackedByNative bool
 }
 
 type GethInstance struct {

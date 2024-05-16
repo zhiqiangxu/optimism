@@ -21,6 +21,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
 	gn "github.com/ethereum/go-ethereum/node"
@@ -83,11 +84,22 @@ func NewOpGeth(t *testing.T, ctx context.Context, cfg *SystemConfig) (*OpGeth, e
 
 	var node EthInstance
 	if cfg.ExternalL2Shim == "" {
-		gethNode, _, err := geth.InitL2("l2", big.NewInt(int64(cfg.DeployConfig.L2ChainID)), l2Genesis, cfg.JWTFilePath)
+		gethNode, _, err := geth.InitL2("l2", big.NewInt(int64(cfg.DeployConfig.L2ChainID)), l2Genesis, cfg.JWTFilePath,
+			func(ethCfg *ethconfig.Config, nodeCfg *gn.Config) error {
+				if cfg.EnableSoulGasToken {
+					ethCfg.EnableSoulGasToken = cfg.EnableSoulGasToken
+					ethCfg.IsSoulBackedByNative = cfg.IsSoulBackedByNative
+				}
+
+				return nil
+			})
 		require.Nil(t, err)
 		require.Nil(t, gethNode.Start())
 		node = gethNode
 	} else {
+		if cfg.EnableSoulGasToken {
+			return nil, fmt.Errorf("SoulGasToken not supported for ExternalL2")
+		}
 		externalNode := (&ExternalRunner{
 			Name:    "l2",
 			BinPath: cfg.ExternalL2Shim,
