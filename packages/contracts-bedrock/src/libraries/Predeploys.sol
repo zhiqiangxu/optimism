@@ -6,7 +6,7 @@ pragma solidity ^0.8.0;
 //          This excludes the preinstalls (non-protocol contracts).
 library Predeploys {
     /// @notice Number of predeploy-namespace addresses reserved for protocol usage.
-    uint256 internal constant PREDEPLOY_COUNT = 2048;
+    uint256 internal constant PREDEPLOY_COUNT = 4096;
 
     /// @custom:legacy
     /// @notice Address of the LegacyMessagePasser predeploy. Deprecate. Use the updated
@@ -75,7 +75,7 @@ library Predeploys {
     address internal constant EAS = 0x4200000000000000000000000000000000000021;
 
     /// @notice Address of the SOUL_GAS_TOKEN predeploy.
-    address internal constant SOUL_GAS_TOKEN = 0x42000000000000000000000000000000000000FE;
+    address internal constant SOUL_GAS_TOKEN = 0x4200000000000000000000000000000000000800;
 
     /// @notice Address of the GovernanceToken predeploy.
     address internal constant GOVERNANCE_TOKEN = 0x4200000000000000000000000000000000000042;
@@ -139,7 +139,7 @@ library Predeploys {
     }
 
     function isPredeployNamespace(address _addr) internal pure returns (bool) {
-        return uint160(_addr) >> 11 == uint160(0x4200000000000000000000000000000000000000) >> 11;
+        return uint160(_addr) >> 12 == uint160(0x4200000000000000000000000000000000000000) >> 12;
     }
 
     /// @notice Function to compute the expected address of the predeploy implementation

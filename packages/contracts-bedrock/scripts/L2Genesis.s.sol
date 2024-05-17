@@ -232,7 +232,7 @@ contract L2Genesis is Deployer {
         // 1B,1C,1D,1E,1F: not used.
         setSchemaRegistry(); // 20
         setEAS(); // 21
-        setSoulGasToken(); // FE
+        setSoulGasToken(); // 800
         setGovernanceToken(); // 42: OP (not behind a proxy)
     }
 
