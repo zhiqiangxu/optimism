@@ -21,7 +21,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
 	gn "github.com/ethereum/go-ethereum/node"
@@ -67,6 +66,10 @@ func NewOpGeth(t *testing.T, ctx context.Context, cfg *SystemConfig) (*OpGeth, e
 	l2Allocs := config.L2Allocs(allocsMode)
 	l2Genesis, err := genesis.BuildL2Genesis(cfg.DeployConfig, l2Allocs, l1Block)
 	require.Nil(t, err)
+	if cfg.EnableSoulGasToken {
+		l2Genesis.Config.Optimism.EnableSoulGasToken = true
+		l2Genesis.Config.Optimism.IsSoulBackedByNative = cfg.IsSoulBackedByNative
+	}
 	l2GenesisBlock := l2Genesis.ToBlock()
 
 	rollupGenesis := rollup.Genesis{
@@ -84,15 +87,7 @@ func NewOpGeth(t *testing.T, ctx context.Context, cfg *SystemConfig) (*OpGeth, e
 
 	var node EthInstance
 	if cfg.ExternalL2Shim == "" {
-		gethNode, _, err := geth.InitL2("l2", big.NewInt(int64(cfg.DeployConfig.L2ChainID)), l2Genesis, cfg.JWTFilePath,
-			func(ethCfg *ethconfig.Config, nodeCfg *gn.Config) error {
-				if cfg.EnableSoulGasToken {
-					ethCfg.EnableSoulGasToken = cfg.EnableSoulGasToken
-					ethCfg.IsSoulBackedByNative = cfg.IsSoulBackedByNative
-				}
-
-				return nil
-			})
+		gethNode, _, err := geth.InitL2("l2", big.NewInt(int64(cfg.DeployConfig.L2ChainID)), l2Genesis, cfg.JWTFilePath)
 		require.Nil(t, err)
 		require.Nil(t, gethNode.Start())
 		node = gethNode
