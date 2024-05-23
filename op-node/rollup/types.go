@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethstorage/da-server/pkg/da/client"
 
 	plasma "github.com/ethereum-optimism/optimism/op-plasma"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
@@ -140,6 +141,21 @@ type Config struct {
 
 	// LegacyUsePlasma is activated when the chain is in plasma mode.
 	LegacyUsePlasma bool `json:"use_plasma,omitempty"`
+
+	DACConfig *DACConfig `json:"dac_config,omitempty"`
+}
+
+type DACConfig struct {
+	URL string
+}
+
+type DACClient interface {
+	UploadBlobs(*eth.ExecutionPayloadEnvelope) error
+}
+
+func (dacConfig *DACConfig) Client() DACClient {
+
+	return client.New(dacConfig.URL, common.Address{} /* this will be specified in the PR for phase 2 da */)
 }
 
 // ValidateL1Config checks L1 config variables for errors.

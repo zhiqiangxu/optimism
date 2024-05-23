@@ -181,6 +181,8 @@ github.com/ethereum-optimism/superchain-registry/superchain v0.0.0-2024052213450
 github.com/ethereum-optimism/superchain-registry/superchain v0.0.0-20240522134500-19555bdbdc95/go.mod h1:7xh2awFQqsiZxFrHKTgEd+InVfDRrkKVUIuK8SAFHp0=
 github.com/ethereum/c-kzg-4844 v0.4.0 h1:3MS1s4JtA868KpJxroZoepdV0ZKBp3u/O5HcZ7R3nlY=
 github.com/ethereum/c-kzg-4844 v0.4.0/go.mod h1:VewdlzQmpT5QSrVhbBuGoCdFJkpaJlO1aQputP83wc0=
+github.com/ethstorage/da-server v0.0.0-20240429131756-431639da87c3 h1:YMfrPUWB/g8fN49+a2hafidGYlUne9vLvc1UgSyyn5I=
+github.com/ethstorage/da-server v0.0.0-20240429131756-431639da87c3/go.mod h1:KNgfHcvd9o+y2SdqLb4XFySKCK5FGDd1VWjb6LQ4Z8U=
 github.com/fatih/color v1.13.0/go.mod h1:kLAiJbzzSOZDVNGyDpeOxJ47H46qBXwg5ILebYFFOfk=
 github.com/fatih/color v1.15.0 h1:kOqh6YHBtK8aywxGerMG2Eq3H6Qgoqeo13Bk2Mv/nBs=
 github.com/fatih/color v1.15.0/go.mod h1:0h5ZqXfHYED7Bhv2ZJamyIOUej9KtShiJESRwBDUSsw=
