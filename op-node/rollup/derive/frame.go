@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"os"
 	"fmt"
 	"io"
 )
@@ -139,6 +140,11 @@ func ParseFrames(data []byte) ([]Frame, error) {
 		var f Frame
 		if err := f.UnmarshalBinary(buf); err != nil {
 			return nil, fmt.Errorf("parsing frame %d: %w", len(frames), err)
+		}
+		var buf bytes.Buffer
+		err := f.MarshalBinary(&buf)
+		if err == nil {
+			fmt.Println("got frame",f.ID, "fn",f.FrameNumber, os.WriteFile(fmt.Sprintf("/root/xu/devnet/optimism/debug/node_%s_%d", f.ID, f.FrameNumber), buf.Bytes(), 0777))
 		}
 		frames = append(frames, f)
 	}

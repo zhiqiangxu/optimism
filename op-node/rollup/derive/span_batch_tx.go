@@ -107,6 +107,7 @@ func (tx *spanBatchTx) decodeTyped(b []byte) (spanBatchTxData, error) {
 		}
 		return &inner, nil
 	case types.BlobTxType:
+		fmt.Println("blobtx found")
 		var inner spanBatchBlobTxData
 		err := rlp.DecodeBytes(b[1:], &inner)
 		if err != nil {

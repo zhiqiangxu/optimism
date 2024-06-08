@@ -232,7 +232,7 @@ func (bq *BatchQueue) AddBatch(ctx context.Context, batch Batch, parent eth.L2Bl
 	if validity == BatchDrop {
 		return // if we do drop the batch, CheckBatch will log the drop reason with WARN level.
 	}
-	batch.LogContext(bq.log).Debug("Adding batch")
+	batch.LogContext(bq.log).Info("Adding batch")
 	bq.batches = append(bq.batches, &data)
 }
 

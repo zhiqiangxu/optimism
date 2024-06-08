@@ -139,6 +139,7 @@ func (ba *FetchingAttributesBuilder) PreparePayloadAttributes(ctx context.Contex
 		}
 	}
 
+	fmt.Println("debug_PrevRandao","l2Parent", l2Parent.ID(), "epoch",epoch, "l1_num", l1Info.NumberU64(), "l1_hash", l1Info.Hash(), "l1_prevrandao", l1Info.MixDigest(), "nextL2Time", nextL2Time)
 	return &eth.PayloadAttributes{
 		Timestamp:             hexutil.Uint64(nextL2Time),
 		PrevRandao:            eth.Bytes32(l1Info.MixDigest()),

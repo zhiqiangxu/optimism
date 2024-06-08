@@ -25,7 +25,7 @@ func AttributesMatchBlock(rollupCfg *rollup.Config, attrs *eth.PayloadAttributes
 		return fmt.Errorf("timestamp field does not match. expected: %v. got: %v", uint64(attrs.Timestamp), block.Timestamp)
 	}
 	if attrs.PrevRandao != block.PrevRandao {
-		return fmt.Errorf("random field does not match. expected: %v. got: %v", attrs.PrevRandao, block.PrevRandao)
+		return fmt.Errorf("random field does not match. expected: %v. got: %v, unsafe block:%v, l2 time:%d", attrs.PrevRandao, block.PrevRandao, envelope.ExecutionPayload.ID(), attrs.Timestamp)
 	}
 	if len(attrs.Transactions) != len(block.Transactions) {
 		missingSafeHashes, missingUnsafeHashes, err := getMissingTxnHashes(l, attrs.Transactions, block.Transactions)

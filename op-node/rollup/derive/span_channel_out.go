@@ -124,6 +124,7 @@ func (co *SpanChannelOut) AddSingularBatch(batch *SingularBatch, seqNum uint64) 
 		return err
 	}
 
+	fmt.Println("spanBatch.AppendSingularBatch", batch.EpochNum, batch.Timestamp, "l2 parent", batch.ParentHash)
 	// update the SpanBatch with the SingularBatch
 	if err := co.spanBatch.AppendSingularBatch(batch, seqNum); err != nil {
 		return fmt.Errorf("failed to append SingularBatch to SpanBatch: %w", err)
@@ -133,7 +134,18 @@ func (co *SpanChannelOut) AddSingularBatch(batch *SingularBatch, seqNum uint64) 
 	if err != nil {
 		return fmt.Errorf("failed to convert SpanBatch into RawSpanBatch: %w", err)
 	}
-
+	{
+		decoded, err := rawSpanBatch.ToSpanBatch(2, 1716476628, big.NewInt(42069))
+		if err != nil {
+			fmt.Println("ToSpanBatch failed", err)
+		} else {
+			oldBatch := decoded.Batches[len(decoded.Batches)-1]
+			fmt.Println("decoded", oldBatch.EpochNum, oldBatch.Timestamp)
+			if oldBatch.EpochNum != batch.EpochNum {
+				fmt.Println("decode EpochNum not match", oldBatch.EpochNum, batch.EpochNum)
+			}
+		}
+	}
 	// switch to the other buffer and reset it for new use
 	// (the RLP buffer which is being made inactive holds the RLP encoded span batch just before the new batch was added)
 	co.swapRLP()
