@@ -124,7 +124,7 @@ type Config struct {
 	// UsePlasma is activated when the chain is in plasma mode.
 	UsePlasma bool `json:"use_plasma"`
 
-	L2BlobConfig *L2BlobConfig `json:"l2_blob_config"`
+	L2BlobConfig *L2BlobConfig `json:"l2_blob_config,omitempty"`
 }
 
 type L2BlobConfig struct {

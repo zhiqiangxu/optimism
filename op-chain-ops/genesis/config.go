@@ -258,6 +258,10 @@ type DeployConfig struct {
 
 	// When Cancun activates. Relative to L1 genesis.
 	L1CancunTimeOffset *hexutil.Uint64 `json:"l1CancunTimeOffset,omitempty"`
+
+	// l2 blob related configs
+	EnableL2Blob bool   `json:"enable_l2_blob,omitempty"`
+	DACURL       string `json:"dac_url,omitempty"`
 }
 
 // Copy will deeply copy the DeployConfig. This does a JSON roundtrip to copy
@@ -559,6 +563,15 @@ func (d *DeployConfig) RollupConfig(l1StartBlock *types.Block, l2GenesisBlockHas
 		return nil, errors.New("SystemConfigProxy cannot be address(0)")
 	}
 
+	var l2BlobConfig *rollup.L2BlobConfig
+	if d.EnableL2Blob {
+		l2BlobConfig = &rollup.L2BlobConfig{
+			EnableL2Blob: true,
+		}
+		if d.DACURL != "" {
+			l2BlobConfig.DACConfig = &rollup.DACConfig{URL: d.DACURL}
+		}
+	}
 	return &rollup.Config{
 		Genesis: rollup.Genesis{
 			L1: eth.BlockID{
@@ -596,6 +609,7 @@ func (d *DeployConfig) RollupConfig(l1StartBlock *types.Block, l2GenesisBlockHas
 		DAChallengeAddress:     d.DAChallengeProxy,
 		DAChallengeWindow:      d.DAChallengeWindow,
 		DAResolveWindow:        d.DAResolveWindow,
+		L2BlobConfig:           l2BlobConfig,
 	}, nil
 }
 
