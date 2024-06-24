@@ -386,6 +386,8 @@ func (b *RawSpanBatch) ToSpanBatch(blockTime, genesisTimestamp uint64, chainID *
 	if err != nil {
 		return nil, err
 	}
+	batch := spanBatch.Batches[len(spanBatch.Batches)-1]
+	fmt.Println("ToSpanBatch", "last epoch", batch.EpochNum, "last l2 timestamp", batch.Timestamp)
 	return spanBatch, nil
 }
 

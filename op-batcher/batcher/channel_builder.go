@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"os"
 	"io"
 	"math"
 
@@ -179,6 +180,7 @@ func (c *ChannelBuilder) AddBlock(block *types.Block) (*derive.L1BlockInfo, erro
 		return l1info, fmt.Errorf("converting block to batch: %w", err)
 	}
 
+	fmt.Println("batch epoch", batch.Epoch(), "batch timestamp", batch.Timestamp, "batch l2 parent", batch.ParentHash)
 	if err = c.co.AddSingularBatch(batch, l1info.SequenceNumber); errors.Is(err, derive.ErrTooManyRLPBytes) || errors.Is(err, derive.ErrCompressorFull) {
 		c.setFullErr(err)
 		return l1info, c.FullErr()
@@ -392,6 +394,7 @@ func (c *ChannelBuilder) outputFrame() error {
 		id:   frameID{chID: c.co.ID(), frameNumber: fn},
 		data: buf.Bytes(),
 	}
+	os.WriteFile(fmt.Sprintf("/root/xu/devnet/optimism/debug/batcher_%s_%d", c.co.ID(), fn), buf.Bytes(), 0777)
 	c.frames = append(c.frames, frame)
 	c.numFrames++
 	c.outputBytes += len(frame.data)

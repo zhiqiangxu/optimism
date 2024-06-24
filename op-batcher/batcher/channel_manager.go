@@ -252,7 +252,7 @@ func (s *channelManager) processBlocks() error {
 		} else if err != nil {
 			return fmt.Errorf("adding block[%d] to channel builder: %w", i, err)
 		}
-		s.log.Debug("Added block to channel", "id", s.currentChannel.ID(), "block", eth.ToBlockID(block))
+		s.log.Warn("Added block to channel", "id", s.currentChannel.ID(), "spanBatchExpire", s.currentChannel.channelBuilder.spanBatchExpire, "timeout", s.currentChannel.channelBuilder.timeout, "timeoutReason", s.currentChannel.channelBuilder.timeoutReason, "block", eth.ToBlockID(block))
 
 		blocksAdded += 1
 		latestL2ref = l2BlockRefFromBlockAndL1Info(block, l1info)
@@ -327,6 +327,8 @@ func (s *channelManager) outputFrames() error {
 		"full_reason", s.currentChannel.FullErr(),
 		"compr_ratio", comprRatio,
 		"latest_l1_origin", s.l1OriginLastClosedChannel,
+		"timeout", s.currentChannel.channelBuilder.timeout,
+		"timeoutReason", s.currentChannel.channelBuilder.timeoutReason,
 	)
 	return nil
 }
