@@ -142,9 +142,13 @@ type Config struct {
 	// LegacyUsePlasma is activated when the chain is in plasma mode.
 	LegacyUsePlasma bool `json:"use_plasma,omitempty"`
 
-	DACConfig *DACConfig `json:"dac_config,omitempty"`
+	L2BlobConfig *L2BlobConfig `json:"l2_blob_config,omitempty"`
 }
 
+type L2BlobConfig struct {
+	DACConfig    *DACConfig `json:"dac_config,omitempty"`
+	EnableL2Blob bool       `json:"enable_l2_blob,omitempty"`
+}
 type DACConfig struct {
 	URL string
 }
@@ -156,6 +160,17 @@ type DACClient interface {
 func (dacConfig *DACConfig) Client() DACClient {
 
 	return client.New(dacConfig.URL, common.Address{} /* this will be specified in the PR for phase 2 da */)
+}
+
+func (cfg *Config) IsL2BlobEnabled() bool {
+	return cfg.L2BlobConfig != nil && cfg.L2BlobConfig.EnableL2Blob
+}
+
+func (cfg *Config) DACConfig() *DACConfig {
+	if cfg.L2BlobConfig == nil {
+		return nil
+	}
+	return cfg.L2BlobConfig.DACConfig
 }
 
 // ValidateL1Config checks L1 config variables for errors.
