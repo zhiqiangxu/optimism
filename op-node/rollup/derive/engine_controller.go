@@ -85,8 +85,8 @@ func NewEngineController(engine ExecEngine, log log.Logger, metrics Metrics, rol
 	}
 
 	var dacClient rollup.DACClient
-	if rollupCfg.DACConfig != nil {
-		dacClient = rollupCfg.DACConfig.Client()
+	if dacConfig := rollupCfg.DACConfig(); dacConfig != nil {
+		dacClient = dacConfig.Client()
 	}
 	return &EngineController{
 		engine:     engine,
