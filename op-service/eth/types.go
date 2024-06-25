@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"os"
 	"reflect"
 	"strconv"
 
@@ -247,6 +248,10 @@ func (envelope *ExecutionPayloadEnvelope) CheckBlockHash() (actual common.Hash, 
 	}
 
 	blockHash := header.Hash()
+	if blockHash != payload.BlockHash {
+		headerBytes, _ := header.MarshalJSON()
+		os.WriteFile(fmt.Sprintf("/tmp/debug_%s", payload.BlockHash), headerBytes, 0660)
+	}
 	return blockHash, blockHash == payload.BlockHash
 }
 
