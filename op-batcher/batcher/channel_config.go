@@ -5,6 +5,7 @@ import (
 
 	"github.com/ethereum-optimism/optimism/op-batcher/compressor"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
+	"github.com/ethereum/go-ethereum/params"
 )
 
 type ChannelConfig struct {
@@ -118,7 +119,7 @@ func (cc *ChannelConfig) Check() error {
 		return fmt.Errorf("unrecognized batch type: %d", cc.BatchType)
 	}
 
-	if nf := cc.TargetNumFrames; nf < 1 {
+	if nf := cc.TargetNumFrames; nf < 1 || nf > params.MaxBlobGasPerBlock/params.BlobTxBlobGasPerBlob {
 		return fmt.Errorf("invalid number of frames %d", nf)
 	}
 
