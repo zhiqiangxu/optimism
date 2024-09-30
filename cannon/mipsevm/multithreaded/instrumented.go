@@ -66,10 +66,7 @@ func (m *InstrumentedState) Step(proof bool) (wit *mipsevm.StepWitness, err erro
 			ProofData: proofData,
 		}
 	}
-	err = m.mipsStep()
-	if err != nil {
-		return nil, err
-	}
+	m.mipsStep()
 
 	if proof {
 		memProof := m.memoryTracker.MemProof()

@@ -13,7 +13,7 @@ import (
 	"github.com/ethereum-optimism/optimism/cannon/mipsevm/program"
 )
 
-func (m *InstrumentedState) handleSyscall() error {
+func (m *InstrumentedState) handleSyscall() {
 	thread := m.state.GetCurrentThread()
 
 	syscallNum, a0, a1, a2, a3 := exec.GetSyscallArgs(m.state.GetRegistersRef())
@@ -33,7 +33,7 @@ func (m *InstrumentedState) handleSyscall() error {
 		if exec.ValidCloneFlags != a0 {
 			m.state.Exited = true
 			m.state.ExitCode = mipsevm.VMStatusPanic
-			return nil
+			return
 		}
 
 		v0 = m.state.NextThreadId
@@ -68,11 +68,11 @@ func (m *InstrumentedState) handleSyscall() error {
 		// Note: We need to call stackTracker after pushThread
 		// to ensure we are tracking in the context of the new thread
 		m.stackTracker.PushStack(stackCaller, stackTarget)
-		return nil
+		return
 	case exec.SysExitGroup:
 		m.state.Exited = true
 		m.state.ExitCode = uint8(a0)
-		return nil
+		return
 	case exec.SysRead:
 		var newPreimageOffset uint32
 		var memUpdated bool
@@ -102,7 +102,7 @@ func (m *InstrumentedState) handleSyscall() error {
 			m.state.Exited = true
 			m.state.ExitCode = uint8(a0)
 		}
-		return nil
+		return
 	case exec.SysFutex:
 		// args: a0 = addr, a1 = op, a2 = val, a3 = timeout
 		effAddr := a0 & 0xFFffFFfc
@@ -122,7 +122,7 @@ func (m *InstrumentedState) handleSyscall() error {
 					thread.FutexTimeoutStep = m.state.Step + exec.FutexTimeoutSteps
 				}
 				// Leave cpu scalars as-is. This instruction will be completed by `onWaitComplete`
-				return nil
+				return
 			}
 		case exec.FutexWakePrivate:
 			// Trigger thread traversal starting from the left stack until we find one waiting on the wakeup
@@ -135,7 +135,7 @@ func (m *InstrumentedState) handleSyscall() error {
 			exec.HandleSyscallUpdates(&thread.Cpu, &thread.Registers, v0, v1)
 			m.preemptThread(thread)
 			m.state.TraverseRight = len(m.state.LeftThreadStack) == 0
-			return nil
+			return
 		default:
 			v0 = exec.SysErrorSignal
 			v1 = exec.MipsEINVAL
@@ -145,7 +145,7 @@ func (m *InstrumentedState) handleSyscall() error {
 		v1 = 0
 		exec.HandleSyscallUpdates(&thread.Cpu, &thread.Registers, v0, v1)
 		m.preemptThread(thread)
-		return nil
+		return
 	case exec.SysOpen:
 		v0 = exec.SysErrorSignal
 		v1 = exec.MipsEBADF
@@ -211,12 +211,11 @@ func (m *InstrumentedState) handleSyscall() error {
 	}
 
 	exec.HandleSyscallUpdates(&thread.Cpu, &thread.Registers, v0, v1)
-	return nil
 }
 
-func (m *InstrumentedState) mipsStep() error {
+func (m *InstrumentedState) mipsStep() {
 	if m.state.Exited {
-		return nil
+		return
 	}
 	m.state.Step += 1
 	thread := m.state.GetCurrentThread()
@@ -238,13 +237,13 @@ func (m *InstrumentedState) mipsStep() error {
 				m.state.Wakeup = exec.FutexEmptyAddr
 			}
 		}
-		return nil
+		return
 	}
 
 	if thread.Exited {
 		m.popThread()
 		m.stackTracker.DropThread(thread.ThreadId)
-		return nil
+		return
 	}
 
 	// check if thread is blocked on a futex
@@ -254,7 +253,7 @@ func (m *InstrumentedState) mipsStep() error {
 		if m.state.Step > thread.FutexTimeoutStep {
 			// timeout! Allow execution
 			m.onWaitComplete(thread, true)
-			return nil
+			return
 		} else {
 			effAddr := thread.FutexAddr & 0xFFffFFfc
 			m.memoryTracker.TrackMemAccess(effAddr)
@@ -262,12 +261,12 @@ func (m *InstrumentedState) mipsStep() error {
 			if thread.FutexVal == mem {
 				// still got expected value, continue sleeping, try next thread.
 				m.preemptThread(thread)
-				return nil
+				return
 			} else {
 				// wake thread up, the value at its address changed!
 				// Userspace can turn thread back to sleep if it was too sporadic.
 				m.onWaitComplete(thread, false)
-				return nil
+				return
 			}
 		}
 	}
@@ -282,7 +281,7 @@ func (m *InstrumentedState) mipsStep() error {
 			}
 		}
 		m.preemptThread(thread)
-		return nil
+		return
 	}
 	m.state.StepsSinceLastContextSwitch += 1
 
@@ -292,24 +291,21 @@ func (m *InstrumentedState) mipsStep() error {
 	// Handle syscall separately
 	// syscall (can read and write)
 	if opcode == 0 && fun == 0xC {
-		return m.handleSyscall()
+		m.handleSyscall()
+		return
 	}
 
 	// Handle RMW (read-modify-write) ops
 	if opcode == exec.OpLoadLinked || opcode == exec.OpStoreConditional {
-		return m.handleRMWOps(insn, opcode)
+		m.handleRMWOps(insn, opcode)
+		return
 	}
 
 	// Exec the rest of the step logic
-	memUpdated, memAddr, err := exec.ExecMipsCoreStepLogic(m.state.getCpuRef(), m.state.GetRegistersRef(), m.state.Memory, insn, opcode, fun, m.memoryTracker, m.stackTracker)
-	if err != nil {
-		return err
-	}
+	memUpdated, memAddr := exec.ExecMipsCoreStepLogic(m.state.getCpuRef(), m.state.GetRegistersRef(), m.state.Memory, insn, opcode, fun, m.memoryTracker, m.stackTracker)
 	if memUpdated {
 		m.handleMemoryUpdate(memAddr)
 	}
-
-	return nil
 }
 
 func (m *InstrumentedState) handleMemoryUpdate(memAddr uint32) {
@@ -326,7 +322,7 @@ func (m *InstrumentedState) clearLLMemoryReservation() {
 }
 
 // handleRMWOps handles LL and SC operations which provide the primitives to implement read-modify-write operations
-func (m *InstrumentedState) handleRMWOps(insn, opcode uint32) error {
+func (m *InstrumentedState) handleRMWOps(insn, opcode uint32) {
 	baseReg := (insn >> 21) & 0x1F
 	base := m.state.GetRegistersRef()[baseReg]
 	rtReg := (insn >> 16) & 0x1F
@@ -359,7 +355,7 @@ func (m *InstrumentedState) handleRMWOps(insn, opcode uint32) error {
 		panic(fmt.Sprintf("Invalid instruction passed to handleRMWOps (opcode %08x)", opcode))
 	}
 
-	return exec.HandleRd(m.state.getCpuRef(), m.state.GetRegistersRef(), rtReg, retVal, true)
+	exec.HandleRd(m.state.getCpuRef(), m.state.GetRegistersRef(), rtReg, retVal, true)
 }
 
 func (m *InstrumentedState) onWaitComplete(thread *ThreadState, isTimedOut bool) {

@@ -18,7 +18,7 @@ func GetInstructionDetails(pc uint32, memory *memory.Memory) (insn, opcode, fun 
 	return insn, opcode, fun
 }
 
-func ExecMipsCoreStepLogic(cpu *mipsevm.CpuScalars, registers *[32]uint32, memory *memory.Memory, insn, opcode, fun uint32, memTracker MemTracker, stackTracker StackTracker) (memUpdated bool, memAddr uint32, err error) {
+func ExecMipsCoreStepLogic(cpu *mipsevm.CpuScalars, registers *[32]uint32, memory *memory.Memory, insn, opcode, fun uint32, memTracker MemTracker, stackTracker StackTracker) (memUpdated bool, memAddr uint32) {
 	// j-type j/jal
 	if opcode == 2 || opcode == 3 {
 		linkReg := uint32(0)
@@ -28,7 +28,7 @@ func ExecMipsCoreStepLogic(cpu *mipsevm.CpuScalars, registers *[32]uint32, memor
 		// Take top 4 bits of the next PC (its 256 MB region), and concatenate with the 26-bit offset
 		target := (cpu.NextPC & 0xF0000000) | ((insn & 0x03FFFFFF) << 2)
 		stackTracker.PushStack(cpu.PC, target)
-		err = HandleJump(cpu, registers, linkReg, target)
+		HandleJump(cpu, registers, linkReg, target)
 		return
 	}
 
@@ -63,7 +63,7 @@ func ExecMipsCoreStepLogic(cpu *mipsevm.CpuScalars, registers *[32]uint32, memor
 	}
 
 	if (opcode >= 4 && opcode < 8) || opcode == 1 {
-		err = HandleBranch(cpu, registers, opcode, insn, rtReg, rs)
+		HandleBranch(cpu, registers, opcode, insn, rtReg, rs)
 		return
 	}
 
@@ -97,23 +97,23 @@ func ExecMipsCoreStepLogic(cpu *mipsevm.CpuScalars, registers *[32]uint32, memor
 			} else {
 				stackTracker.PopStack()
 			}
-			err = HandleJump(cpu, registers, linkReg, rs)
+			HandleJump(cpu, registers, linkReg, rs)
 			return
 		}
 
 		if fun == 0xa { // movz
-			err = HandleRd(cpu, registers, rdReg, rs, rt == 0)
+			HandleRd(cpu, registers, rdReg, rs, rt == 0)
 			return
 		}
 		if fun == 0xb { // movn
-			err = HandleRd(cpu, registers, rdReg, rs, rt != 0)
+			HandleRd(cpu, registers, rdReg, rs, rt != 0)
 			return
 		}
 
 		// lo and hi registers
 		// can write back
 		if fun >= 0x10 && fun < 0x1c {
-			err = HandleHiLo(cpu, registers, fun, rs, rt, rdReg)
+			HandleHiLo(cpu, registers, fun, rs, rt, rdReg)
 			return
 		}
 	}
@@ -127,7 +127,7 @@ func ExecMipsCoreStepLogic(cpu *mipsevm.CpuScalars, registers *[32]uint32, memor
 	}
 
 	// write back the value to destination register
-	err = HandleRd(cpu, registers, rdReg, val, true)
+	HandleRd(cpu, registers, rdReg, val, true)
 	return
 }
 
@@ -303,7 +303,7 @@ func SignExtend(dat uint32, idx uint32) uint32 {
 	}
 }
 
-func HandleBranch(cpu *mipsevm.CpuScalars, registers *[32]uint32, opcode uint32, insn uint32, rtReg uint32, rs uint32) error {
+func HandleBranch(cpu *mipsevm.CpuScalars, registers *[32]uint32, opcode uint32, insn uint32, rtReg uint32, rs uint32) {
 	if cpu.NextPC != cpu.PC+4 {
 		panic("branch in delay slot")
 	}
@@ -334,10 +334,9 @@ func HandleBranch(cpu *mipsevm.CpuScalars, registers *[32]uint32, opcode uint32,
 	} else {
 		cpu.NextPC = cpu.NextPC + 4 // branch not taken
 	}
-	return nil
 }
 
-func HandleHiLo(cpu *mipsevm.CpuScalars, registers *[32]uint32, fun uint32, rs uint32, rt uint32, storeReg uint32) error {
+func HandleHiLo(cpu *mipsevm.CpuScalars, registers *[32]uint32, fun uint32, rs uint32, rt uint32, storeReg uint32) {
 	val := uint32(0)
 	switch fun {
 	case 0x10: // mfhi
@@ -370,10 +369,9 @@ func HandleHiLo(cpu *mipsevm.CpuScalars, registers *[32]uint32, fun uint32, rs u
 
 	cpu.PC = cpu.NextPC
 	cpu.NextPC = cpu.NextPC + 4
-	return nil
 }
 
-func HandleJump(cpu *mipsevm.CpuScalars, registers *[32]uint32, linkReg uint32, dest uint32) error {
+func HandleJump(cpu *mipsevm.CpuScalars, registers *[32]uint32, linkReg uint32, dest uint32) {
 	if cpu.NextPC != cpu.PC+4 {
 		panic("jump in delay slot")
 	}
@@ -383,10 +381,9 @@ func HandleJump(cpu *mipsevm.CpuScalars, registers *[32]uint32, linkReg uint32, 
 	if linkReg != 0 {
 		registers[linkReg] = prevPC + 8 // set the link-register to the instr after the delay slot instruction.
 	}
-	return nil
 }
 
-func HandleRd(cpu *mipsevm.CpuScalars, registers *[32]uint32, storeReg uint32, val uint32, conditional bool) error {
+func HandleRd(cpu *mipsevm.CpuScalars, registers *[32]uint32, storeReg uint32, val uint32, conditional bool) {
 	if storeReg >= 32 {
 		panic("invalid register")
 	}
@@ -396,5 +393,4 @@ func HandleRd(cpu *mipsevm.CpuScalars, registers *[32]uint32, storeReg uint32, v
 	}
 	cpu.PC = cpu.NextPC
 	cpu.NextPC = cpu.NextPC + 4
-	return nil
 }
